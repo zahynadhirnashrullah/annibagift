@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "36004632059",
+    "project_id": "anniba-gift",
+    "storage_bucket": "anniba-gift.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:36004632059:android:3d4a6f3904ebecea59675e",
+        "android_client_info": {
+          "package_name": "com.example.annibagift"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCzsR-OQKnGBjOlK-yrCWtJPsO8_U8-mng"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
