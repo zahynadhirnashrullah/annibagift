@@ -54,6 +54,19 @@ class AppTextStyles {
 // --- DATA MODELS ---
 // ====================================================================
 
+// NEW: Model untuk item dalam pesanan
+class OrderItem {
+  final String stokItemId;
+  final String namaBarang;
+  int jumlah;
+
+  OrderItem({
+    required this.stokItemId,
+    required this.namaBarang,
+    required this.jumlah,
+  });
+}
+
 class StokItem {
   String id;
   String nama;
@@ -66,7 +79,7 @@ class Sewa {
   final String nama;
   final String alamat;
   final DateTime tanggal;
-  final String pesanan;
+  final List<OrderItem> items; // UPDATED
   final int durasi;
   final String jaminan;
 
@@ -74,7 +87,7 @@ class Sewa {
     required this.nama,
     required this.alamat,
     required this.tanggal,
-    required this.pesanan,
+    required this.items, // UPDATED
     required this.durasi,
     required this.jaminan,
   });
@@ -84,13 +97,13 @@ class Pesanan {
   final String nama;
   final String alamat;
   final DateTime tanggal;
-  final String pesanan;
+  final List<OrderItem> items; // UPDATED
 
   Pesanan({
     required this.nama,
     required this.alamat,
     required this.tanggal,
-    required this.pesanan,
+    required this.items, // UPDATED
   });
 }
 
@@ -146,7 +159,6 @@ class _MainScreenState extends State<MainScreen> {
   final List<Sewa> sewaList = [];
   final List<Pesanan> pesananList = [];
   final List<StokItem> stokList = [
-    // Contoh data awal
     StokItem(id: '1', nama: 'Kotak Kado Besar', jumlah: 15),
     StokItem(id: '2', nama: 'Pita Satin Merah (rol)', jumlah: 30),
     StokItem(id: '3', nama: 'Snack Bouquet', jumlah: 12),
@@ -161,11 +173,23 @@ class _MainScreenState extends State<MainScreen> {
     StokItem(id: '12', nama: 'Kertas Kado Polkadot', jumlah: 17),
     StokItem(id: '13', nama: 'Bunga Plastik (ikat)', jumlah: 11),
     StokItem(id: '14', nama: 'Kartu Ucapan Spesial', jumlah: 35),
-    StokItem(id: '15', nama: 'Papan Bunga', jumlah: 5),
+    StokItem(id: '15', nama: 'Papan Bunga Mini', jumlah: 5),
     StokItem(id: '16', nama: 'Bouquet Hijab', jumlah: 19),
     StokItem(id: '17', nama: 'Money Bouquet', jumlah: 13),
     StokItem(id: '18', nama: 'Bloom Box', jumlah: 7),
   ];
+
+  // NEW: Fungsi untuk mengurangi stok
+  void _kurangiStok(List<OrderItem> items) {
+    setState(() {
+      for (var orderItem in items) {
+        final index = stokList.indexWhere((stok) => stok.id == orderItem.stokItemId);
+        if (index != -1) {
+          stokList[index].jumlah -= orderItem.jumlah;
+        }
+      }
+    });
+  }
 
   // CRUD for Stok
   void _addStok(String nama, int jumlah) {
@@ -201,6 +225,7 @@ class _MainScreenState extends State<MainScreen> {
   void _addSewa(Sewa data) {
     setState(() {
       sewaList.add(data);
+      _kurangiStok(data.items); // Kurangi stok saat sewa ditambahkan
     });
   }
 
@@ -214,6 +239,7 @@ class _MainScreenState extends State<MainScreen> {
   void _addPesanan(Pesanan data) {
     setState(() {
       pesananList.add(data);
+      _kurangiStok(data.items); // Kurangi stok saat pesanan ditambahkan
     });
   }
 
@@ -231,8 +257,6 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Daftar halaman dibuat langsung di dalam build method
-    // untuk memastikan data yang dikirim selalu yang terbaru.
     final List<Widget> currentPages = [
       DashboardScreen(
         sewaCount: sewaList.length,
@@ -243,14 +267,10 @@ class _MainScreenState extends State<MainScreen> {
         onNavigateToStok: () => _onItemTapped(2),
       ),
       PencatatanScreen(
-        onConfirmSewa: (data) {
-          _addSewa(data);
-          _onItemTapped(3);
-        },
-        onConfirmPesanan: (data) {
-          _addPesanan(data);
-          _onItemTapped(4);
-        },
+        stokList: stokList, // Pass stok list to pencatatan
+        onConfirmSewa: _addSewa,
+        onConfirmPesanan: _addPesanan,
+        onNavigateAfterSubmit: (int pageIndex) => _onItemTapped(pageIndex),
       ),
       StokScreen(
         stokList: stokList,
@@ -315,7 +335,6 @@ class _MainScreenState extends State<MainScreen> {
 // ====================================================================
 // --- SCREEN: Dashboard ---
 // ====================================================================
-
 class DashboardScreen extends StatelessWidget {
   final int sewaCount;
   final int pesananCount;
@@ -349,7 +368,6 @@ class DashboardScreen extends StatelessWidget {
           const Text("Berikut ringkasan bisnis Anda hari ini.", style: AppTextStyles.body),
           const SizedBox(height: 24),
 
-          // Financial Summary Card
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -406,7 +424,6 @@ class DashboardScreen extends StatelessWidget {
           ),
           const SizedBox(height: 24),
 
-          // Quick Stats
           Row(
             children: [
               Expanded(child: _StatCard(
@@ -436,11 +453,8 @@ class DashboardScreen extends StatelessWidget {
             isFullWidth: true,
           ),
           const SizedBox(height: 24),
-
-          // Recent Activity Section
           const Text("Aktivitas Terbaru", style: AppTextStyles.heading2),
           const SizedBox(height: 16),
-          // Placeholder for recent activity list
           const Center(
             child: Text("Belum ada aktivitas terbaru.", style: AppTextStyles.body),
           ),
@@ -515,13 +529,17 @@ class _StatCard extends StatelessWidget {
 // ====================================================================
 
 class PencatatanScreen extends StatefulWidget {
+  final List<StokItem> stokList;
   final Function(Sewa) onConfirmSewa;
   final Function(Pesanan) onConfirmPesanan;
+  final Function(int) onNavigateAfterSubmit;
   
   const PencatatanScreen({
     super.key, 
+    required this.stokList,
     required this.onConfirmSewa, 
-    required this.onConfirmPesanan
+    required this.onConfirmPesanan,
+    required this.onNavigateAfterSubmit,
   });
 
   @override
@@ -530,17 +548,14 @@ class PencatatanScreen extends StatefulWidget {
 
 class _PencatatanScreenState extends State<PencatatanScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-
   final _sewaFormKey = GlobalKey<FormState>();
   final _pesananFormKey = GlobalKey<FormState>();
 
-  // Controllers for common fields
   final _namaController = TextEditingController();
   final _alamatController = TextEditingController();
-  final _pesananController = TextEditingController();
   DateTime? _selectedDate;
+  List<OrderItem> _selectedItems = [];
 
-  // Controllers for Sewa specific fields
   final _durasiController = TextEditingController();
   String? _selectedJaminan;
   
@@ -557,7 +572,6 @@ class _PencatatanScreenState extends State<PencatatanScreen> with SingleTickerPr
     _tabController.dispose();
     _namaController.dispose();
     _alamatController.dispose();
-    _pesananController.dispose();
     _durasiController.dispose();
     super.dispose();
   }
@@ -568,14 +582,6 @@ class _PencatatanScreenState extends State<PencatatanScreen> with SingleTickerPr
       initialDate: DateTime.now(),
       firstDate: DateTime(2023),
       lastDate: DateTime(2030),
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.light().copyWith(
-            colorScheme: const ColorScheme.light(primary: AppColors.primary),
-          ),
-          child: child!,
-        );
-      },
     );
     if (picked != null) {
       setState(() => _selectedDate = picked);
@@ -583,47 +589,56 @@ class _PencatatanScreenState extends State<PencatatanScreen> with SingleTickerPr
   }
 
   void _submitForm() {
-    if (_tabController.index == 0) { // Sewa Tab
-      if (_sewaFormKey.currentState!.validate() && _selectedDate != null && _selectedJaminan != null) {
-        final sewaData = Sewa(
-          nama: _namaController.text,
-          alamat: _alamatController.text,
-          tanggal: _selectedDate!,
-          pesanan: _pesananController.text,
-          durasi: int.tryParse(_durasiController.text) ?? 0,
-          jaminan: _selectedJaminan!,
-        );
-        widget.onConfirmSewa(sewaData);
-        _clearForm();
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Data sewa berhasil ditambahkan."), backgroundColor: AppColors.accentGreen,));
+    final isSewaTab = _tabController.index == 0;
+    final formKey = isSewaTab ? _sewaFormKey : _pesananFormKey;
+
+    if (formKey.currentState!.validate() && _selectedDate != null && _selectedItems.isNotEmpty) {
+      if (isSewaTab) {
+        if (_selectedJaminan != null) {
+          final sewaData = Sewa(
+            nama: _namaController.text,
+            alamat: _alamatController.text,
+            tanggal: _selectedDate!,
+            items: _selectedItems,
+            durasi: int.tryParse(_durasiController.text) ?? 0,
+            jaminan: _selectedJaminan!,
+          );
+          widget.onConfirmSewa(sewaData);
+          _clearForm();
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Data sewa berhasil ditambahkan."), backgroundColor: AppColors.accentGreen,));
+          widget.onNavigateAfterSubmit(3); // Navigate to Sewa page
+        } else {
+           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Harap pilih jaminan."), backgroundColor: AppColors.accentRed,));
+        }
       } else {
-         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Harap lengkapi semua data sewa."), backgroundColor: AppColors.accentRed,));
-      }
-    } else { // Pesanan Tab
-      if (_pesananFormKey.currentState!.validate() && _selectedDate != null) {
         final pesananData = Pesanan(
           nama: _namaController.text,
           alamat: _alamatController.text,
           tanggal: _selectedDate!,
-          pesanan: _pesananController.text,
+          items: _selectedItems,
         );
         widget.onConfirmPesanan(pesananData);
         _clearForm();
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Data pesanan berhasil ditambahkan."), backgroundColor: AppColors.accentGreen,));
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Harap lengkapi semua data pesanan."), backgroundColor: AppColors.accentRed,));
+        widget.onNavigateAfterSubmit(4); // Navigate to Pesanan page
       }
+    } else {
+      String errorMessage = "Harap lengkapi semua data";
+      if (_selectedItems.isEmpty) {
+        errorMessage = "Harap pilih minimal satu barang.";
+      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMessage), backgroundColor: AppColors.accentRed,));
     }
   }
 
   void _clearForm() {
     _namaController.clear();
     _alamatController.clear();
-    _pesananController.clear();
     _durasiController.clear();
     setState(() {
       _selectedDate = null;
       _selectedJaminan = null;
+      _selectedItems = [];
     });
   }
 
@@ -652,7 +667,7 @@ class _PencatatanScreenState extends State<PencatatanScreen> with SingleTickerPr
       ),
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: _buildGradientButton("Simpan Data", Icons.save, _submitForm),
+        child: _buildGradientButton("Simpan Data", Icons.save_rounded, _submitForm),
       ),
     );
   }
@@ -685,7 +700,6 @@ class _PencatatanScreenState extends State<PencatatanScreen> with SingleTickerPr
     );
   }
   
-  // Widget untuk field yang sama di kedua form
   Widget _buildCommonFields() {
     return Column(
       children: [
@@ -693,13 +707,46 @@ class _PencatatanScreenState extends State<PencatatanScreen> with SingleTickerPr
         const SizedBox(height: 16),
         _buildTextField(_alamatController, "Alamat", Icons.home_outlined),
         const SizedBox(height: 16),
-        _buildTextField(_pesananController, "Detail Pesanan/Sewa", Icons.card_giftcard_rounded),
+        _buildItemSelectionField(), // UPDATED
         const SizedBox(height: 16),
         _buildDatePicker(),
       ],
     );
   }
   
+  Widget _buildItemSelectionField() {
+    return InkWell(
+      onTap: () async {
+        final result = await Navigator.push<List<OrderItem>>(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PilihStokScreen(
+              stokList: widget.stokList,
+              initialSelection: _selectedItems,
+            ),
+          ),
+        );
+        if (result != null) {
+          setState(() {
+            _selectedItems = result;
+          });
+        }
+      },
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: "Barang Pesanan/Sewa",
+          prefixIcon: const Icon(Icons.card_giftcard_rounded),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          filled: true,
+          fillColor: Colors.white,
+        ),
+        child: _selectedItems.isEmpty
+            ? const Text("Pilih barang...")
+            : Text("${_selectedItems.length} barang dipilih"),
+      ),
+    );
+  }
+
   Widget _buildJaminanDropdown() {
     return DropdownButtonFormField<String>(
       value: _selectedJaminan,
@@ -885,6 +932,117 @@ class _StokScreenState extends State<StokScreen> {
   }
 }
 
+// ====================================================================
+// --- NEW SCREEN: Pilih Stok ---
+// ====================================================================
+
+class PilihStokScreen extends StatefulWidget {
+  final List<StokItem> stokList;
+  final List<OrderItem> initialSelection;
+  const PilihStokScreen({super.key, required this.stokList, required this.initialSelection});
+
+  @override
+  State<PilihStokScreen> createState() => _PilihStokScreenState();
+}
+
+class _PilihStokScreenState extends State<PilihStokScreen> {
+  late Map<String, OrderItem> _selectedItems;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedItems = {
+      for (var item in widget.initialSelection) item.stokItemId: item
+    };
+  }
+
+  void _updateQuantity(StokItem stokItem, int change) {
+    setState(() {
+      final existing = _selectedItems[stokItem.id];
+      final currentQty = existing?.jumlah ?? 0;
+      final newQty = currentQty + change;
+
+      if (newQty > 0) {
+        if (newQty > stokItem.jumlah) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Stok ${stokItem.nama} tidak mencukupi.'),
+            backgroundColor: AppColors.accentRed,
+          ));
+          return;
+        }
+        if (existing != null) {
+          existing.jumlah = newQty;
+        } else {
+          _selectedItems[stokItem.id] = OrderItem(
+            stokItemId: stokItem.id,
+            namaBarang: stokItem.nama,
+            jumlah: newQty,
+          );
+        }
+      } else {
+        _selectedItems.remove(stokItem.id);
+      }
+    });
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Pilih Barang dari Stok"),
+      ),
+      body: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(8, 8, 8, 80),
+        itemCount: widget.stokList.length,
+        itemBuilder: (context, index) {
+          final stokItem = widget.stokList[index];
+          final selectedQty = _selectedItems[stokItem.id]?.jumlah ?? 0;
+          return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(stokItem.nama, style: AppTextStyles.subtitle),
+                        Text("Sisa: ${stokItem.jumlah}", style: AppTextStyles.body),
+                      ],
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.remove_circle_outline),
+                        onPressed: selectedQty > 0 ? () => _updateQuantity(stokItem, -1) : null,
+                      ),
+                      Text(selectedQty.toString(), style: AppTextStyles.subtitle),
+                      IconButton(
+                        icon: const Icon(Icons.add_circle_outline),
+                        color: AppColors.primary,
+                        onPressed: selectedQty < stokItem.jumlah ? () => _updateQuantity(stokItem, 1) : null,
+                      ),
+                    ],
+                  )
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.pop(context, _selectedItems.values.toList());
+        },
+        label: Text("Selesai (${_selectedItems.length})"),
+        icon: const Icon(Icons.check),
+        backgroundColor: AppColors.accentGreen,
+      ),
+    );
+  }
+}
 
 // ====================================================================
 // --- SCREEN: Sewa & Pemesanan ---
@@ -938,7 +1096,6 @@ class PemesananScreen extends StatelessWidget {
 
 // ====================================================================
 // --- SHARED WIDGETS ---
-// Widget kustom untuk digunakan di berbagai halaman
 // ====================================================================
 
 Widget _buildGradientButton(String text, IconData icon, VoidCallback onPressed) {
@@ -1042,7 +1199,8 @@ class _SewaListTile extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            Text(item.pesanan, style: AppTextStyles.body.copyWith(color: AppColors.textPrimary, fontStyle: FontStyle.italic)),
+            // UPDATED: Display list of items
+            ...item.items.map((orderItem) => Text('• ${orderItem.namaBarang} (x${orderItem.jumlah})', style: AppTextStyles.body.copyWith(color: AppColors.textPrimary))),
             const Divider(height: 24),
              _InfoRow(icon: Icons.calendar_today_outlined, text: DateFormat('d MMM yyyy').format(item.tanggal)),
              _InfoRow(icon: Icons.timer_outlined, text: "${item.durasi} hari"),
@@ -1083,7 +1241,8 @@ class _PesananListTile extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            Text(item.pesanan, style: AppTextStyles.body.copyWith(color: AppColors.textPrimary, fontStyle: FontStyle.italic)),
+            // UPDATED: Display list of items
+            ...item.items.map((orderItem) => Text('• ${orderItem.namaBarang} (x${orderItem.jumlah})', style: AppTextStyles.body.copyWith(color: AppColors.textPrimary))),
             const Divider(height: 24),
             _InfoRow(icon: Icons.calendar_today_outlined, text: DateFormat('d MMM yyyy').format(item.tanggal)),
             _InfoRow(icon: Icons.location_on_outlined, text: item.alamat),
