@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../models/models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/shared_widgets.dart';
 
@@ -10,6 +11,9 @@ class DashboardScreen extends StatelessWidget {
   final VoidCallback onNavigateToSewa;
   final VoidCallback onNavigateToPesanan;
   final VoidCallback onNavigateToStok;
+  final User currentUser; // <-- Logika baru
+  final VoidCallback onLogout; // <-- Logika baru
+
   const DashboardScreen({
     super.key,
     required this.sewaCount,
@@ -18,6 +22,8 @@ class DashboardScreen extends StatelessWidget {
     required this.onNavigateToSewa,
     required this.onNavigateToPesanan,
     required this.onNavigateToStok,
+    required this.currentUser, // <-- Parameter baru
+    required this.onLogout, // <-- Parameter baru
   });
 
   @override
@@ -26,38 +32,52 @@ class DashboardScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text("Dashboard"),
         centerTitle: false,
+        actions: [
+          // <-- MODIFIKASI: Menambahkan tombol logout
+          IconButton(
+            icon: const Icon(Icons.logout_rounded, color: AppColors.accentRed),
+            tooltip: 'Logout',
+            onPressed: onLogout,
+          ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text("Selamat Datang, Anniba!", style: AppTextStyles.heading1),
+          // <-- MODIFIKASI: Menggunakan nama pengguna yang sedang login
+          Text("Selamat Datang, ${currentUser.username}!", style: AppTextStyles.heading1),
           const SizedBox(height: 8),
           const Text("Berikut ringkasan bisnis Anda hari ini.", style: AppTextStyles.body),
           const SizedBox(height: 24),
 
+          // --- KODE UI LAMA ANDA DIKEMBALIKAN DI SINI ---
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppColors.primary, AppColors.secondary],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withAlpha((0.3 * 255).round()),
-                  blurRadius: 15,
-                  offset: const Offset(0, 5),
-                )
-              ]
-            ),
+                gradient: const LinearGradient(
+                  colors: [AppColors.primary, AppColors.secondary],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withAlpha((0.3 * 255).round()),
+                    blurRadius: 15,
+                    offset: const Offset(0, 5),
+                  )
+                ]),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("Total Saldo", style: TextStyle(color: Colors.white70, fontSize: 16)),
+                const Text("Total Saldo",
+                    style: TextStyle(color: Colors.white70, fontSize: 16)),
                 const SizedBox(height: 8),
-                const Text("Rp 12.500.000", style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold)),
+                const Text("Rp 12.500.000",
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold)),
                 const SizedBox(height: 20),
                 SizedBox(
                   height: 80,
@@ -93,7 +113,8 @@ class DashboardScreen extends StatelessWidget {
 
           Row(
             children: [
-              Expanded(child: StatCard(
+              Expanded(
+                  child: StatCard(
                 icon: Icons.shopping_cart_checkout_rounded,
                 label: 'Sewa Aktif',
                 value: sewaCount.toString(),
@@ -101,7 +122,8 @@ class DashboardScreen extends StatelessWidget {
                 onTap: onNavigateToSewa,
               )),
               const SizedBox(width: 16),
-               Expanded(child: StatCard(
+              Expanded(
+                  child: StatCard(
                 icon: Icons.list_alt_rounded,
                 label: 'Total Pesanan',
                 value: pesananCount.toString(),

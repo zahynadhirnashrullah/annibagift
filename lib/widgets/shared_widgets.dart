@@ -35,23 +35,32 @@ Widget buildGradientButton(String text, IconData icon, VoidCallback onPressed) {
   );
 }
 
-Widget buildTextField(TextEditingController controller, String label, IconData icon,
-    {TextInputType? keyboardType}) {
-  return TextFormField(
+Widget buildTextField(
+  TextEditingController controller,
+  String label,
+  IconData icon, {
+  // TAMBAHKAN parameter opsional di sini
+  bool isObscure = false,
+  TextInputType? keyboardType,
+  String? Function(String?)? validator,
+}) {
+  return TextFormField( // Ubah dari TextField ke TextFormField agar bisa pakai validator
     controller: controller,
+    obscureText: isObscure, // Gunakan parameter isObscure
+    keyboardType: keyboardType, // Gunakan parameter keyboardType
     decoration: InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon, color: AppColors.primary),
+      prefixIcon: Icon(icon),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       filled: true,
       fillColor: Colors.white,
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.primary, width: 2),
-      ),
     ),
-    keyboardType: keyboardType,
-    validator: (v) => v == null || v.isEmpty ? 'Wajib diisi' : null,
+    validator: validator ?? (value) { // Gunakan parameter validator
+        if (value == null || value.isEmpty) {
+          return '$label tidak boleh kosong';
+        }
+        return null;
+      },
   );
 }
 
@@ -252,6 +261,64 @@ class StatCard extends StatelessWidget {
     required this.onTap,
     this.isFullWidth = false,
   });
+
+  Widget buildTextField(
+  TextEditingController controller,
+  String label,
+  IconData icon, {
+  TextInputType? keyboardType,
+  bool isObscure = false,
+  String? Function(String?)? validator,
+}) {
+  return TextFormField(
+    controller: controller,
+    keyboardType: keyboardType,
+    obscureText: isObscure,
+    decoration: InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      filled: true,
+      fillColor: Colors.white,
+    ),
+    validator: validator ?? (value) {
+      if (value == null || value.isEmpty) {
+        return '$label tidak boleh kosong';
+      }
+      return null;
+    },
+  );
+}
+
+Widget buildGradientButton(String text, IconData icon, VoidCallback onPressed) {
+  return Container(
+    decoration: BoxDecoration(
+      gradient: const LinearGradient(
+        colors: [AppColors.primary, AppColors.secondary],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.transparent,
+        shadowColor: Colors.transparent,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: Colors.white),
+          const SizedBox(width: 8),
+          Text(text, style: AppTextStyles.button),
+        ],
+      ),
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {

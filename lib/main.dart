@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
+// Hapus import firebase jika Anda belum mengaturnya.
+// import 'package:firebase_core/firebase_core.dart';
+// import 'firebase_options.dart';
 import 'theme/app_theme.dart';
-import 'pages/main_screen.dart';
+import 'pages/login_screen.dart'; // <-- Ubah import ke LoginScreen
 
-Future<void> main() async {
+// Hapus 'async' dan 'await Firebase' jika Anda tidak menggunakan Firebase
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  // await Firebase.initializeApp(
+  //   options: DefaultFirebaseOptions.currentPlatform,
+  // );
   runApp(const AnnibaGiftApp());
 }
 
@@ -20,9 +22,8 @@ class AnnibaGiftApp extends StatelessWidget {
     return MaterialApp(
       title: 'Anniba Gift',
       theme: AppTheme.themeData,
-      home: const MainScreen(),
+      home: const LoginScreen(), // <-- Atur LoginScreen sebagai halaman utama
       debugShowCheckedModeBanner: false,
     );
+  }
 }
-}
-

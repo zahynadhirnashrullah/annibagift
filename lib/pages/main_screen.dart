@@ -1,14 +1,22 @@
 import 'package:flutter/material.dart';
 import '../models/models.dart';
+import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import 'dashboard.dart';
 import 'pencatatan.dart';
 import 'stok.dart';
 import 'sewa.dart';
 import 'pemesanan.dart';
+import 'user_management_screen.dart';
+import 'login_screen.dart';
 
 class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+  final User currentUser;
+
+  const MainScreen({
+    super.key,
+    required this.currentUser,
+  });
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -17,6 +25,7 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
+  // Data state untuk fitur-fitur lain
   final List<Sewa> sewaList = [];
   final List<Pesanan> pesananList = [];
   final List<StokItem> stokList = [
@@ -40,10 +49,43 @@ class _MainScreenState extends State<MainScreen> {
     StokItem(id: '18', nama: 'Bloom Box', jumlah: 7),
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = 0;
+  }
+
+  // --- FUNGSI-FUNGSI MANAJEMEN PENGGUNA ---
+  void _addUser(String username, String password, Role role) {
+    setState(() {
+      AuthService.instance.addUser(username, password, role);
+    });
+  }
+
+  void _updateUser(String id, String newUsername, String newPassword, Role newRole) {
+    setState(() {
+      AuthService.instance.updateUser(id, newUsername, newPassword, newRole);
+    });
+  }
+
+  void _deleteUser(String id) {
+    setState(() {
+      AuthService.instance.deleteUser(id);
+    });
+  }
+
+  void _toggleUserStatus(String id) {
+    setState(() {
+      AuthService.instance.toggleUserStatus(id);
+    });
+  }
+
+  // --- FUNGSI MANAJEMEN STOK, SEWA, PESANAN ---
   void _kurangiStok(List<OrderItem> items) {
     setState(() {
       for (var orderItem in items) {
-        final index = stokList.indexWhere((stok) => stok.id == orderItem.stokItemId);
+        final index =
+            stokList.indexWhere((stok) => stok.id == orderItem.stokItemId);
         if (index != -1) {
           stokList[index].jumlah -= orderItem.jumlah;
         }
@@ -112,9 +154,17 @@ class _MainScreenState extends State<MainScreen> {
     });
   }
 
+  void _logout() {
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
+      (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final List<Widget> currentPages = [
+    final List<Widget> pages = [
       DashboardScreen(
         sewaCount: sewaList.length,
         pesananCount: pesananList.length,
@@ -122,6 +172,8 @@ class _MainScreenState extends State<MainScreen> {
         onNavigateToSewa: () => _onItemTapped(3),
         onNavigateToPesanan: () => _onItemTapped(4),
         onNavigateToStok: () => _onItemTapped(2),
+        currentUser: widget.currentUser,
+        onLogout: _logout,
       ),
       PencatatanScreen(
         stokList: stokList,
@@ -139,10 +191,31 @@ class _MainScreenState extends State<MainScreen> {
       PemesananScreen(pesananList: pesananList, onDelete: _deletePesanan),
     ];
 
+    final List<BottomNavigationBarItem> navItems = [
+      const BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), label: "Dashboard"),
+      const BottomNavigationBarItem(icon: Icon(Icons.edit_note_rounded), label: "Pencatatan"),
+      const BottomNavigationBarItem(icon: Icon(Icons.inventory_2_rounded), label: "Stok"),
+      const BottomNavigationBarItem(icon: Icon(Icons.shopping_cart_rounded), label: "Sewa"),
+      const BottomNavigationBarItem(icon: Icon(Icons.list_alt_rounded), label: "Pesanan"),
+    ];
+
+    if (widget.currentUser.role == Role.pemilik) {
+      // --- PEMANGGILAN UserManagementScreen DENGAN SEMUA PARAMETER ---
+      pages.add(UserManagementScreen(
+        onAddUser: _addUser,
+        onUpdateUser: _updateUser,
+        onDeleteUser: _deleteUser,
+        onToggleUserStatus: _toggleUserStatus,
+        currentUser: widget.currentUser,
+      ));
+      navItems.add(const BottomNavigationBarItem(
+          icon: Icon(Icons.manage_accounts_rounded), label: "Users"));
+    }
+
     return Scaffold(
       body: IndexedStack(
         index: _selectedIndex,
-        children: currentPages,
+        children: pages,
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -172,15 +245,10 @@ class _MainScreenState extends State<MainScreen> {
             unselectedItemColor: Colors.grey.shade400,
             backgroundColor: Colors.white,
             elevation: 0,
-            selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+            selectedLabelStyle:
+                const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
             unselectedLabelStyle: const TextStyle(fontSize: 12),
-            items: const [
-              BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), label: "Dashboard"),
-              BottomNavigationBarItem(icon: Icon(Icons.edit_note_rounded), label: "Pencatatan"),
-              BottomNavigationBarItem(icon: Icon(Icons.inventory_2_rounded), label: "Stok"),
-              BottomNavigationBarItem(icon: Icon(Icons.shopping_cart_rounded), label: "Sewa"),
-              BottomNavigationBarItem(icon: Icon(Icons.list_alt_rounded), label: "Pesanan"),
-            ],
+            items: navItems,
           ),
         ),
       ),
