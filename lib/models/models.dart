@@ -58,15 +58,35 @@ enum Role { pemilik, karyawan }
 class User {
   String id;
   String username;
-  String password;
+  String email;
   Role role;
-  bool isActive; // Properti baru untuk status
+  bool isActive;
 
   User({
     required this.id,
     required this.username,
-    required this.password,
+    required this.email,
     required this.role,
-    this.isActive = true, // Nilai default adalah aktif
+    this.isActive = true,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'username': username,
+      'email': email,
+      'role': role.toString(),
+      'isActive': isActive,
+    };
+  }
+
+  static User fromMap(Map<String, dynamic> map) {
+    return User(
+      id: map['id'],
+      username: map['username'],
+      email: map['email'],
+      role: map['role'] == Role.pemilik.toString() ? Role.pemilik : Role.karyawan,
+      isActive: map['isActive'] ?? true,
+    );
+  }
 }

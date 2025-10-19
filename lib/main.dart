@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
-// Hapus import firebase jika Anda belum mengaturnya.
-// import 'package:firebase_core/firebase_core.dart';
-// import 'firebase_options.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'theme/app_theme.dart';
-import 'pages/login_screen.dart'; // <-- Ubah import ke LoginScreen
+import 'pages/login_screen.dart';
 
-// Hapus 'async' dan 'await Firebase' jika Anda tidak menggunakan Firebase
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // await Firebase.initializeApp(
-  //   options: DefaultFirebaseOptions.currentPlatform,
-  // );
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const AnnibaGiftApp());
 }
 

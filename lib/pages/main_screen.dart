@@ -56,28 +56,24 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   // --- FUNGSI-FUNGSI MANAJEMEN PENGGUNA ---
-  void _addUser(String username, String password, Role role) {
-    setState(() {
-      AuthService.instance.addUser(username, password, role);
-    });
+  Future<void> _addUser(String email, String username, String password, Role role) async {
+    await AuthService.instance.createUser(email, username, password, role);
+    setState(() {});
   }
 
-  void _updateUser(String id, String newUsername, String newPassword, Role newRole) {
-    setState(() {
-      AuthService.instance.updateUser(id, newUsername, newPassword, newRole);
-    });
+  Future<void> _updateUser(String id, {String? username, Role? role}) async {
+    await AuthService.instance.updateUser(id, username: username, role: role);
+    setState(() {});
   }
 
-  void _deleteUser(String id) {
-    setState(() {
-      AuthService.instance.deleteUser(id);
-    });
+  Future<void> _deleteUser(String id) async {
+    await AuthService.instance.deleteUser(id);
+    setState(() {});
   }
 
-  void _toggleUserStatus(String id) {
-    setState(() {
-      AuthService.instance.toggleUserStatus(id);
-    });
+  Future<void> _toggleUserStatus(String id) async {
+    await AuthService.instance.toggleUserStatus(id);
+    setState(() {});
   }
 
   // --- FUNGSI MANAJEMEN STOK, SEWA, PESANAN ---
@@ -200,12 +196,11 @@ class _MainScreenState extends State<MainScreen> {
     ];
 
     if (widget.currentUser.role == Role.pemilik) {
-      // --- PEMANGGILAN UserManagementScreen DENGAN SEMUA PARAMETER ---
       pages.add(UserManagementScreen(
-        onAddUser: _addUser,
-        onUpdateUser: _updateUser,
-        onDeleteUser: _deleteUser,
-        onToggleUserStatus: _toggleUserStatus,
+        addUser: _addUser,
+        updateUser: _updateUser,
+        deleteUser: _deleteUser,
+        toggleUserStatus: _toggleUserStatus,
         currentUser: widget.currentUser,
       ));
       navItems.add(const BottomNavigationBarItem(

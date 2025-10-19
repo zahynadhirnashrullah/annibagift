@@ -7,19 +7,18 @@ import '../theme/app_theme.dart';
 import '../widgets/shared_widgets.dart';
 
 class UserManagementScreen extends StatefulWidget {
-  // Tambahkan callback functions untuk setiap aksi
-  final Function(String id, String newUsername, String newPassword, Role newRole) onUpdateUser;
-  final Function(String id) onDeleteUser;
-  final Function(String id) onToggleUserStatus;
-  final Function(String username, String password, Role role) onAddUser;
-  final User currentUser; // Kita butuh info user yang sedang login
+  final Future<void> Function(String email, String username, String password, Role role) addUser;
+  final Future<void> Function(String id, {String? username, Role? role}) updateUser;
+  final Future<void> Function(String id) deleteUser;
+  final Future<void> Function(String id) toggleUserStatus;
+  final User currentUser;
 
   const UserManagementScreen({
     super.key,
-    required this.onAddUser,
-    required this.onUpdateUser,
-    required this.onDeleteUser,
-    required this.onToggleUserStatus,
+    required this.addUser,
+    required this.updateUser,
+    required this.deleteUser,
+    required this.toggleUserStatus,
     required this.currentUser,
   });
 
@@ -28,12 +27,26 @@ class UserManagementScreen extends StatefulWidget {
 }
 
 class _UserManagementScreenState extends State<UserManagementScreen> {
+  late Future<List<User>> _usersFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _usersFuture = AuthService.instance.getUsers();
+  }
+
+  void _refreshUsers() {
+    setState(() {
+      _usersFuture = AuthService.instance.getUsers();
+    });
+  }
 
   void _showUserFormDialog({User? user}) {
     final bool isEditing = user != null;
     final formKey = GlobalKey<FormState>();
+    final emailController = TextEditingController();
     final usernameController = TextEditingController(text: user?.username ?? '');
-    final passwordController = TextEditingController(text: user?.password ?? '');
+    final passwordController = TextEditingController();
     Role selectedRole = user?.role ?? Role.karyawan;
 
     showModalBottomSheet(
@@ -56,10 +69,29 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               children: [
                 Text(isEditing ? 'Edit Pengguna' : 'Tambah Pengguna Baru', style: AppTextStyles.heading2),
                 const SizedBox(height: 24),
+                if (!isEditing) ...[
+                  buildTextField(
+                    emailController,
+                    'Email',
+                    Icons.email_outlined,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Email tidak boleh kosong';
+                      }
+                      if (!value.contains('@')) {
+                        return 'Email tidak valid';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 buildTextField(usernameController, 'Username', Icons.person_add_alt_1_rounded),
                 const SizedBox(height: 16),
-                buildTextField(passwordController, 'Password', Icons.lock_person_rounded),
-                const SizedBox(height: 16),
+                if (!isEditing) ...[
+                  buildTextField(passwordController, 'Password', Icons.lock_person_rounded, isObscure: true),
+                  const SizedBox(height: 16),
+                ],
                 DropdownButtonFormField<Role>(
                   value: selectedRole,
                   items: Role.values.map((role) => DropdownMenuItem<Role>(
@@ -81,14 +113,15 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 buildGradientButton(
                   isEditing ? 'Simpan Perubahan' : 'Tambahkan Pengguna',
                   Icons.save_rounded,
-                  () {
+                  () async {
                     if (formKey.currentState!.validate()) {
                       if (isEditing) {
-                        widget.onUpdateUser(user!.id, usernameController.text, passwordController.text, selectedRole);
+                        await widget.updateUser(user!.id, username: usernameController.text, role: selectedRole);
                       } else {
-                        widget.onAddUser(usernameController.text, passwordController.text, selectedRole);
+                        await widget.addUser(emailController.text, usernameController.text, passwordController.text, selectedRole);
                       }
-                      Navigator.pop(context);
+                      if (mounted) Navigator.pop(context);
+                      _refreshUsers();
                     }
                   },
                 ),
@@ -100,83 +133,75 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     );
   }
 
-  void _confirmDelete(User user) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Konfirmasi Hapus'),
-        content: Text('Apakah Anda yakin ingin menghapus pengguna "${user.username}"? Aksi ini tidak dapat dibatalkan.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Batal')),
-          TextButton(
-            onPressed: () {
-              widget.onDeleteUser(user.id);
-              Navigator.of(ctx).pop();
-            },
-            child: const Text('Hapus', style: TextStyle(color: AppColors.accentRed)),
-          ),
-        ],
-      ),
-    );
-  }
+  // _confirmDelete removed (no longer used)
 
   @override
   Widget build(BuildContext context) {
-    final userList = AuthService.instance.getUsers();
-
     return Scaffold(
       appBar: AppBar(title: const Text('Manajemen Pengguna')),
-      body: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
-        itemCount: userList.length,
-        itemBuilder: (context, index) {
-          final user = userList[index];
-          // Mencegah user mengedit/menghapus dirinya sendiri untuk keamanan
-          final isCurrentUser = user.id == widget.currentUser.id;
-
-          return Opacity(
-            opacity: user.isActive ? 1.0 : 0.5, // Efek redup untuk user nonaktif
-            child: Card(
-              elevation: 2,
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              child: ListTile(
-                leading: Icon(
-                  user.role == Role.pemilik ? Icons.shield_rounded : Icons.person_rounded,
-                  color: user.isActive ? AppColors.primary : Colors.grey,
-                  size: 40,
+      body: FutureBuilder<List<User>>(
+        future: _usersFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text('Tidak ada pengguna.'));
+          }
+          final userList = snapshot.data!;
+          return ListView.builder(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+            itemCount: userList.length,
+            itemBuilder: (context, index) {
+              final user = userList[index];
+              final isCurrentUser = user.id == widget.currentUser.id;
+              return Opacity(
+                opacity: user.isActive ? 1.0 : 0.5,
+                child: Card(
+                  elevation: 2,
+                  margin: const EdgeInsets.symmetric(vertical: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: ListTile(
+                    leading: Icon(
+                      user.role == Role.pemilik ? Icons.shield_rounded : Icons.person_rounded,
+                      color: user.isActive ? AppColors.primary : Colors.grey,
+                      size: 40,
+                    ),
+                    title: Text(user.username, style: AppTextStyles.subtitle),
+                    subtitle: Text(
+                      '${user.role.name[0].toUpperCase()}${user.role.name.substring(1)} - ${user.isActive ? "Aktif" : "Nonaktif"}',
+                      style: AppTextStyles.body,
+                    ),
+                    trailing: isCurrentUser
+                        ? null
+                        : PopupMenuButton<String>(
+                            onSelected: (value) async {
+                              if (value == 'edit') {
+                                _showUserFormDialog(user: user);
+                              } else if (value == 'toggle') {
+                                await widget.toggleUserStatus(user.id);
+                                _refreshUsers();
+                              } else if (value == 'delete') {
+                                await widget.deleteUser(user.id);
+                                _refreshUsers();
+                              }
+                            },
+                            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                              const PopupMenuItem<String>(value: 'edit', child: Text('Edit')),
+                              PopupMenuItem<String>(value: 'toggle', child: Text(user.isActive ? 'Nonaktifkan' : 'Aktifkan')),
+                              const PopupMenuItem<String>(value: 'delete', child: Text('Hapus', style: TextStyle(color: AppColors.accentRed))),
+                            ],
+                          ),
+                  ),
                 ),
-                title: Text(user.username, style: AppTextStyles.subtitle),
-                subtitle: Text(
-                  '${user.role.name[0].toUpperCase()}${user.role.name.substring(1)} - ${user.isActive ? "Aktif" : "Nonaktif"}',
-                  style: AppTextStyles.body,
-                ),
-                trailing: isCurrentUser
-                    ? null // Jangan tampilkan menu untuk user yang sedang login
-                    : PopupMenuButton<String>(
-                        onSelected: (value) {
-                          if (value == 'edit') {
-                            _showUserFormDialog(user: user);
-                          } else if (value == 'toggle') {
-                            widget.onToggleUserStatus(user.id);
-                          } else if (value == 'delete') {
-                            _confirmDelete(user);
-                          }
-                        },
-                        itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                          const PopupMenuItem<String>(value: 'edit', child: Text('Edit')),
-                          PopupMenuItem<String>(value: 'toggle', child: Text(user.isActive ? 'Nonaktifkan' : 'Aktifkan')),
-                          const PopupMenuItem<String>(value: 'delete', child: Text('Hapus', style: TextStyle(color: AppColors.accentRed))),
-                        ],
-                      ),
-              ),
-            ),
+              );
+            },
           );
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'user-management-fab',
-        onPressed: () => _showUserFormDialog(), // Panggil dialog yang sama tanpa user
+        onPressed: () => _showUserFormDialog(),
         label: const Text('Tambah Pengguna'),
         icon: const Icon(Icons.add),
         backgroundColor: AppColors.primary,

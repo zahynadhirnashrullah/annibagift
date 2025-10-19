@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
+import '../services/firebase_auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/shared_widgets.dart';
 import 'main_screen.dart';
@@ -13,29 +13,54 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _isLoading = false;
 
-  void _login() {
+  Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
-      final username = _usernameController.text;
-      final password = _passwordController.text;
-      final user = AuthService.instance.login(username, password);
+      setState(() {
+        _isLoading = true;
+      });
 
-      if (user != null) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => MainScreen(currentUser: user),
-          ),
+      try {
+        final email = _emailController.text;
+        final password = _passwordController.text;
+        final user = await FirebaseAuthService.instance.signInWithEmailAndPassword(
+          email,
+          password,
         );
-      } else {
+
+        if (user != null) {
+          if (!mounted) return;
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => MainScreen(currentUser: user),
+            ),
+          );
+        } else {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Email atau password salah.'),
+              backgroundColor: AppColors.accentRed,
+            ),
+          );
+        }
+      } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Username atau password salah.'),
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
             backgroundColor: AppColors.accentRed,
           ),
         );
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
     }
   }
@@ -81,7 +106,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   'Silakan login untuk melanjutkan',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(red: 255, green: 255, blue: 255, alpha: 204), // 0.8 * 255 = 204
                     fontSize: 16,
                   ),
                 ),
@@ -110,9 +135,19 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Column(
                       children: [
                         buildTextField(
-                          _usernameController,
-                          'Username',
-                          Icons.person_outline_rounded,
+                          _emailController,
+                          'Email',
+                          Icons.email_outlined,
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter your email';
+                            }
+                            if (!value.contains('@')) {
+                              return 'Please enter a valid email';
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 20),
                         buildTextField(
@@ -120,10 +155,24 @@ class _LoginScreenState extends State<LoginScreen> {
                           'Password',
                           Icons.lock_outline_rounded,
                           isObscure: true,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter your password';
+                            }
+                            if (value.length < 6) {
+                              return 'Password must be at least 6 characters';
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 32),
-                        buildGradientButton(
-                            'Login', Icons.login_rounded, _login),
+                        _isLoading
+                          ? const CircularProgressIndicator()
+                          : buildGradientButton(
+                              'Login', 
+                              Icons.login_rounded, 
+                              _login,
+                            ),
                       ],
                     ),
                   ),
