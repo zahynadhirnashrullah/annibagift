@@ -11,8 +11,8 @@ class DashboardScreen extends StatelessWidget {
   final VoidCallback onNavigateToSewa;
   final VoidCallback onNavigateToPesanan;
   final VoidCallback onNavigateToStok;
-  final User currentUser; // <-- Logika baru
-  final VoidCallback onLogout; // <-- Logika baru
+  final User currentUser;
+  final VoidCallback onLogout;
 
   const DashboardScreen({
     super.key,
@@ -22,8 +22,8 @@ class DashboardScreen extends StatelessWidget {
     required this.onNavigateToSewa,
     required this.onNavigateToPesanan,
     required this.onNavigateToStok,
-    required this.currentUser, // <-- Parameter baru
-    required this.onLogout, // <-- Parameter baru
+    required this.currentUser,
+    required this.onLogout,
   });
 
   @override
@@ -33,24 +33,66 @@ class DashboardScreen extends StatelessWidget {
         title: const Text("Dashboard"),
         centerTitle: false,
         actions: [
-          // <-- MODIFIKASI: Menambahkan tombol logout
           IconButton(
             icon: const Icon(Icons.logout_rounded, color: AppColors.accentRed),
             tooltip: 'Logout',
-            onPressed: onLogout,
+            // <-- MODIFIKASI DIMULAI DI SINI
+            onPressed: () {
+              // Menampilkan dialog konfirmasi
+              showDialog(
+                context: context,
+                builder: (BuildContext dialogContext) {
+                  return AlertDialog(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16.0),
+                    ),
+                    title: const Text('Konfirmasi Logout'),
+                    content: const Text('Apakah Anda yakin ingin logout?'),
+                    actions: <Widget>[
+                      // Tombol "Tidak"
+                      TextButton(
+                        child: const Text(
+                          'Tidak',
+                          style: TextStyle(color: AppColors.primary), // Sesuaikan dengan theme Anda
+                        ),
+                        onPressed: () {
+                          // Tutup dialog
+                          Navigator.of(dialogContext).pop();
+                        },
+                      ),
+                      // Tombol "Ya"
+                      TextButton(
+                        child: const Text(
+                          'Ya, Logout',
+                          style: TextStyle(color: AppColors.accentRed), // Memberi warna merah untuk aksi
+                        ),
+                        onPressed: () {
+                          // 1. Tutup dialog
+                          Navigator.of(dialogContext).pop();
+                          // 2. Jalankan fungsi logout asli
+                          onLogout();
+                        },
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+            // <-- MODIFIKASI SELESAI DI SINI
           ),
         ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // <-- MODIFIKASI: Menggunakan nama pengguna yang sedang login
-          Text("Selamat Datang, ${currentUser.username}!", style: AppTextStyles.heading1),
+          Text("Selamat Datang, ${currentUser.username}!",
+              style: AppTextStyles.heading1),
           const SizedBox(height: 8),
-          const Text("Berikut ringkasan bisnis Anda hari ini.", style: AppTextStyles.body),
+          const Text("Berikut ringkasan bisnis Anda hari ini.",
+              style: AppTextStyles.body),
           const SizedBox(height: 24),
 
-          // --- KODE UI LAMA ANDA DIKEMBALIKAN DI SINI ---
+          // --- KODE UI LAMA ANDA ---
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -145,7 +187,8 @@ class DashboardScreen extends StatelessWidget {
           const Text('Aktivitas Terbaru', style: AppTextStyles.heading2),
           const SizedBox(height: 16),
           const Center(
-            child: Text('Belum ada aktivitas terbaru.', style: AppTextStyles.body),
+            child:
+                Text('Belum ada aktivitas terbaru.', style: AppTextStyles.body),
           ),
         ],
       ),

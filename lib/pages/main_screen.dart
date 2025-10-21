@@ -1,3 +1,5 @@
+// lib/screens/main_screen.dart
+
 import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
@@ -8,6 +10,9 @@ import 'sewa.dart';
 import 'pemesanan.dart';
 import 'user_management_screen.dart';
 import 'login_screen.dart';
+// Import service yang relevan
+import '../services/auth_service.dart';
+import '../services/firebase_admin_service.dart';
 
 class MainScreen extends StatefulWidget {
   final User currentUser;
@@ -24,7 +29,7 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
-  // Data state untuk fitur-fitur lain
+  // Data state (biarkan apa adanya)
   final List<Sewa> sewaList = [];
   final List<Pesanan> pesananList = [];
   final List<StokItem> stokList = [
@@ -54,11 +59,8 @@ class _MainScreenState extends State<MainScreen> {
     _selectedIndex = 0;
   }
 
-  // --- FUNGSI-FUNGSI MANAJEMEN PENGGUNA ---
-  // User management is handled inside `UserManagementScreen` via FirebaseAdminService.
-
-  // --- FUNGSI MANAJEMEN STOK, SEWA, PESANAN ---
-  void _kurangiStok(List<OrderItem> items) {
+  // ... (Fungsi _kurangiStok, _addStok, _updateStok, _restockStok, _addSewa, _deleteSewa, _addPesanan, _deletePesanan biarkan apa adanya) ...
+    void _kurangiStok(List<OrderItem> items) {
     setState(() {
       for (var orderItem in items) {
         final index =
@@ -131,7 +133,12 @@ class _MainScreenState extends State<MainScreen> {
     });
   }
 
-  void _logout() {
+  // PERBAIKAN: Fungsi logout memanggil kedua service
+  void _logout() async {
+    await AuthService.instance.signOut();
+    await FirebaseAdminService.instance.signOutAdmin(); // Logout dari admin-app
+    
+    if (!mounted) return;
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -176,6 +183,7 @@ class _MainScreenState extends State<MainScreen> {
       const BottomNavigationBarItem(icon: Icon(Icons.list_alt_rounded), label: "Pesanan"),
     ];
 
+    // Logika ini sudah benar, HANYA menambahkan tab jika admin
     if (widget.currentUser.role == Role.admin) {
       pages.add(UserManagementScreen(
         currentUser: widget.currentUser,
@@ -189,43 +197,42 @@ class _MainScreenState extends State<MainScreen> {
         index: _selectedIndex,
         children: pages,
       ),
-      bottomNavigationBar: widget.currentUser.role == Role.admin
-          ? Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(24),
-                  topRight: Radius.circular(24),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withAlpha((0.2 * 255).round()),
-                    spreadRadius: 5,
-                    blurRadius: 15,
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(24),
-                  topRight: Radius.circular(24),
-                ),
-                child: BottomNavigationBar(
-                  currentIndex: _selectedIndex,
-                  onTap: _onItemTapped,
-                  type: BottomNavigationBarType.fixed,
-                  selectedItemColor: AppColors.primary,
-                  unselectedItemColor: Colors.grey.shade400,
-                  backgroundColor: Colors.white,
-                  elevation: 0,
-                  selectedLabelStyle:
-                      const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                  unselectedLabelStyle: const TextStyle(fontSize: 12),
-                  items: navItems,
-                ),
-              ),
-            )
-          : null,
+      // PERBAIKAN: Hapus kondisi ternary, tampilkan navbar untuk semua role
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withAlpha((0.2 * 255).round()),
+              spreadRadius: 5,
+              blurRadius: 15,
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+          child: BottomNavigationBar(
+            currentIndex: _selectedIndex,
+            onTap: _onItemTapped,
+            type: BottomNavigationBarType.fixed,
+            selectedItemColor: AppColors.primary,
+            unselectedItemColor: Colors.grey.shade400,
+            backgroundColor: Colors.white,
+            elevation: 0,
+            selectedLabelStyle:
+                const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+            unselectedLabelStyle: const TextStyle(fontSize: 12),
+            items: navItems,
+          ),
+        ),
+      ),
     );
   }
 }

@@ -1,8 +1,12 @@
+// lib/screens/login_screen.dart
 import 'package:flutter/material.dart';
-import '../services/firebase_auth_service.dart';
+// Import service yang benar
+import '../services/auth_service.dart'; 
+import '../services/firebase_admin_service.dart'; // Import admin service
 import '../theme/app_theme.dart';
 import '../widgets/shared_widgets.dart';
 import 'main_screen.dart';
+import '../models/models.dart'; // Import model untuk Role
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -26,19 +30,38 @@ class _LoginScreenState extends State<LoginScreen> {
       try {
         final email = _emailController.text;
         final password = _passwordController.text;
-        final user = await FirebaseAuthService.instance.signInWithEmailAndPassword(
+        
+        // Ganti ke AuthService.instance.login
+        final user = await AuthService.instance.login(
           email,
           password,
         );
 
         if (user != null) {
-          if (!mounted) return;
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => MainScreen(currentUser: user),
-            ),
-          );
+          // Cek apakah user aktif
+          if (!user.isActive) {
+             if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Akun Anda telah dinonaktifkan. Hubungi admin.'),
+                backgroundColor: AppColors.accentRed,
+              ),
+            );
+            await AuthService.instance.signOut();
+          } else {
+            // PERBAIKAN: Jika user adalah admin, login juga ke admin-app
+            if (user.role == Role.admin) {
+              await FirebaseAdminService.instance.loginAsAdmin(email, password);
+            }
+
+             if (!mounted) return;
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => MainScreen(currentUser: user),
+              ),
+            );
+          }
         } else {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
@@ -49,6 +72,7 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         }
       } catch (e) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: ${e.toString()}'),
@@ -67,10 +91,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Kita gunakan Stack untuk menumpuk background dan konten
     return Scaffold(
       body: Container(
-        // 1. Background Gradien
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [AppColors.primary, AppColors.secondary],
@@ -83,10 +105,9 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // -- BAGIAN HEADER --
                 SizedBox(height: MediaQuery.of(context).size.height * 0.1),
                 const Icon(
-                  Icons.card_giftcard_rounded, // 2. Ikon Tematik
+                  Icons.card_giftcard_rounded,
                   size: 80,
                   color: Colors.white,
                 ),
@@ -106,15 +127,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   'Silakan login untuk melanjutkan',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.white.withValues(red: 255, green: 255, blue: 255, alpha: 204), // 0.8 * 255 = 204
+                    color: Colors.white.withValues(red: 255, green: 255, blue: 255, alpha: 204),
                     fontSize: 16,
                   ),
                 ),
                 SizedBox(height: MediaQuery.of(context).size.height * 0.1),
-
-                // -- BAGIAN FORM --
                 Container(
-                  // 3. Kontainer Kurva dengan Shadow
                   padding: const EdgeInsets.all(32.0),
                   decoration: BoxDecoration(
                     color: AppColors.background,

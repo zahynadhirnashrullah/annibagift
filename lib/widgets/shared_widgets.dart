@@ -1,3 +1,5 @@
+// lib/widgets/shared_widgets.dart
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
@@ -39,15 +41,16 @@ Widget buildTextField(
   TextEditingController controller,
   String label,
   IconData icon, {
-  // TAMBAHKAN parameter opsional di sini
   bool isObscure = false,
   TextInputType? keyboardType,
   String? Function(String?)? validator,
+  bool readOnly = false, // <-- PERBAIKAN: Ditambahkan
 }) {
-  return TextFormField( // Ubah dari TextField ke TextFormField agar bisa pakai validator
+  return TextFormField(
     controller: controller,
-    obscureText: isObscure, // Gunakan parameter isObscure
-    keyboardType: keyboardType, // Gunakan parameter keyboardType
+    obscureText: isObscure,
+    keyboardType: keyboardType,
+    readOnly: readOnly, // <-- PERBAIKAN: Diterapkan di sini
     decoration: InputDecoration(
       labelText: label,
       prefixIcon: Icon(icon),
@@ -55,7 +58,7 @@ Widget buildTextField(
       filled: true,
       fillColor: Colors.white,
     ),
-    validator: validator ?? (value) { // Gunakan parameter validator
+    validator: validator ?? (value) {
         if (value == null || value.isEmpty) {
           return '$label tidak boleh kosong';
         }
@@ -262,63 +265,7 @@ class StatCard extends StatelessWidget {
     this.isFullWidth = false,
   });
 
-  Widget buildTextField(
-  TextEditingController controller,
-  String label,
-  IconData icon, {
-  TextInputType? keyboardType,
-  bool isObscure = false,
-  String? Function(String?)? validator,
-}) {
-  return TextFormField(
-    controller: controller,
-    keyboardType: keyboardType,
-    obscureText: isObscure,
-    decoration: InputDecoration(
-      labelText: label,
-      prefixIcon: Icon(icon),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      filled: true,
-      fillColor: Colors.white,
-    ),
-    validator: validator ?? (value) {
-      if (value == null || value.isEmpty) {
-        return '$label tidak boleh kosong';
-      }
-      return null;
-    },
-  );
-}
-
-Widget buildGradientButton(String text, IconData icon, VoidCallback onPressed) {
-  return Container(
-    decoration: BoxDecoration(
-      gradient: const LinearGradient(
-        colors: [AppColors.primary, AppColors.secondary],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.transparent,
-        shadowColor: Colors.transparent,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: Colors.white),
-          const SizedBox(width: 8),
-          Text(text, style: AppTextStyles.button),
-        ],
-      ),
-    ),
-  );
-}
+  // PERBAIKAN: Fungsi duplikat buildTextField dan buildGradientButton dihapus dari sini
 
   @override
   Widget build(BuildContext context) {

@@ -26,13 +26,14 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   @override
   void initState() {
     super.initState();
-    _usersStream = _adminService.getUsersStreamRTDB();
+    // PERBAIKAN: Menggunakan getUsersStream() (Firestore)
+    _usersStream = _adminService.getUsersStream();
   }
 
   void _showUserFormDialog({User? user}) {
     final bool isEditing = user != null;
     final formKey = GlobalKey<FormState>();
-    final emailController = TextEditingController();
+    final emailController = TextEditingController(text: user?.email ?? '');
     final usernameController = TextEditingController(text: user?.username ?? '');
     final passwordController = TextEditingController();
     Role selectedRole = user?.role ?? Role.karyawan;
@@ -64,6 +65,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       emailController,
                       'Email',
                       Icons.email_outlined,
+                      keyboardType: TextInputType.emailAddress, 
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Email tidak boleh kosong';
@@ -76,14 +78,46 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     ),
                     const SizedBox(height: 16),
                   ],
-                  buildTextField(usernameController, 'Username', Icons.person_add_alt_1_rounded),
+                  if (isEditing)
+                    buildTextField(
+                      emailController,
+                      'Email (tidak dapat diubah)',
+                      Icons.email_outlined,
+                      readOnly: true, // <-- PERBAIKAN: Menggunakan parameter readOnly
+                    ),
+                  if (isEditing) const SizedBox(height: 16),
+                  buildTextField(
+                    usernameController, 
+                    'Username', 
+                    Icons.person_add_alt_1_rounded,
+                    validator: (value) { 
+                        if (value == null || value.isEmpty) {
+                          return 'Username tidak boleh kosong';
+                        }
+                        return null;
+                      },
+                  ),
                   const SizedBox(height: 16),
                   if (!isEditing) ...[
-                    buildTextField(passwordController, 'Password', Icons.lock_person_rounded, isObscure: true),
+                    buildTextField(
+                      passwordController, 
+                      'Password', 
+                      Icons.lock_person_rounded, 
+                      isObscure: true,
+                      validator: (value) { 
+                        if (value == null || value.isEmpty) {
+                          return 'Password tidak boleh kosong';
+                        }
+                        if (value.length < 6) {
+                           return 'Password minimal 6 karakter';
+                        }
+                        return null;
+                      },
+                    ),
                     const SizedBox(height: 16),
                   ],
                   DropdownButtonFormField<Role>(
-                    initialValue: selectedRole,
+                    initialValue: selectedRole, // <-- PERBAIKAN: Ganti value ke initialValue
                     items: Role.values.map((role) => DropdownMenuItem<Role>(
                           value: role,
                           child: Text(role.name[0].toUpperCase() + role.name.substring(1)),
@@ -105,29 +139,37 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     Icons.save_rounded,
                     () async {
                       if (formKey.currentState!.validate()) {
-                      if (isEditing) {
-                        await _adminService.updateUser(user.id, username: usernameController.text, role: selectedRole);
-                        if (!mounted) return;
-                        Navigator.of(context).pop();
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pengguna berhasil diperbarui')));
-                      } else {
-                        final created = await _adminService.createUser(emailController.text, passwordController.text, usernameController.text, selectedRole);
-                        if (created != null) {
-                          if (!mounted) return;
-                          Navigator.of(context).pop();
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pengguna berhasil dibuat')));
-                          // Navigate to detail screen to show created data
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (context) => UserDetailScreen(userId: created.id)),
-                          );
-                        } else {
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Gagal membuat pengguna')));
+                        try {
+                          if (isEditing) {
+                            await _adminService.updateUser(user!.id, username: usernameController.text, role: selectedRole);
+                            
+                            if (!mounted) return; // <-- PERBAIKAN: Cek mounted
+                            Navigator.of(sheetContext).pop(); 
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pengguna berhasil diperbarui'), backgroundColor: AppColors.accentGreen));
+                          } else {
+                            final created = await _adminService.createUser(emailController.text, passwordController.text, usernameController.text, selectedRole);
+                            
+                            if (!mounted) return; // <-- PERBAIKAN: Cek mounted
+
+                            if (created != null) {
+                              Navigator.of(sheetContext).pop(); 
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pengguna berhasil dibuat'), backgroundColor: AppColors.accentGreen));
+                              
+                              Navigator.of(context).push(
+                                MaterialPageRoute(builder: (context) => UserDetailScreen(userId: created.id)),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Gagal membuat pengguna'), backgroundColor: AppColors.accentRed));
+                            }
+                          }
+                        } catch (e) {
+                           if (!mounted) return; // <-- PERBAIKAN: Cek mounted
+                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: AppColors.accentRed));
                         }
-                      }
                       }
                     },
                   ),
+                  const SizedBox(height: 16), 
                 ],
               ),
             ),
@@ -136,8 +178,6 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       },
     );
   }
-
-  // _confirmDelete removed (no longer used)
 
   @override
   Widget build(BuildContext context) {
@@ -149,8 +189,14 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
+          if (snapshot.hasError) { 
+             return Center(child: Text('Error: ${snapshot.error.toString()}')); // Tampilkan error
+          }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('Tidak ada pengguna.'));
+            return const EmptyStateWidget(
+              message: 'Belum ada pengguna',
+              icon: Icons.people_outline,
+            );
           }
           final userList = snapshot.data!;
           return ListView.builder(
@@ -159,6 +205,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             itemBuilder: (context, index) {
               final user = userList[index];
               final isCurrentUser = user.id == widget.currentUser.id;
+              
+              if (user.isDeleted == true) return const SizedBox.shrink();
+
               return Opacity(
                 opacity: user.isActive ? 1.0 : 0.5,
                 child: Card(
@@ -166,6 +215,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   margin: const EdgeInsets.symmetric(vertical: 8),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                     leading: Icon(
                       user.role == Role.admin ? Icons.shield_rounded : Icons.person_rounded,
                       color: user.isActive ? AppColors.primary : Colors.grey,
@@ -177,29 +227,72 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       style: AppTextStyles.body,
                     ),
                     trailing: isCurrentUser
-                        ? null
+                        ? const Padding(
+                            padding: EdgeInsets.only(right: 12.0),
+                            child: Chip(label: Text('Anda'), backgroundColor: AppColors.secondary),
+                          )
                         : PopupMenuButton<String>(
                             onSelected: (value) async {
-                              if (value == 'view') {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => UserDetailScreen(userId: user.id),
-                                  ),
-                                );
-                              } else if (value == 'edit') {
-                                _showUserFormDialog(user: user);
-                              } else if (value == 'toggle') {
-                                await _adminService.toggleUserStatus(user.id);
-                              } else if (value == 'delete') {
-                                await _adminService.softDeleteUser(user.id);
+                              try {
+                                if (value == 'view') {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => UserDetailScreen(userId: user.id),
+                                    ),
+                                  );
+                                } else if (value == 'edit') {
+                                  _showUserFormDialog(user: user);
+                                } else if (value == 'toggle') {
+                                  await _adminService.toggleUserStatus(user.id);
+                                  
+                                  if (!mounted) return; // <-- PERBAIKAN: Cek mounted
+                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Status ${user.username} diubah'), backgroundColor: AppColors.accentGreen));
+                                } else if (value == 'delete') {
+                                  final confirm = await showDialog<bool>(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      title: const Text('Konfirmasi Hapus'),
+                                      content: Text('Anda yakin ingin menghapus ${user.username}? Akun ini tidak bisa dikembalikan.'),
+                                      actions: [
+                                        TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Batal')),
+                                        TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Hapus', style: TextStyle(color: AppColors.accentRed))),
+                                      ],
+                                    ),
+                                  );
+
+                                  if (!mounted) return; // <-- PERBAIKAN: Cek mounted
+
+                                  if (confirm == true) {
+                                    await _adminService.softDeleteUser(user.id);
+                                    
+                                    if (!mounted) return; // <-- PERBAIKAN: Cek mounted
+                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${user.username} telah dihapus'), backgroundColor: AppColors.accentGreen));
+                                  }
+                                }
+                              } catch (e) {
+                                if (!mounted) return; // <-- PERBAIKAN: Cek mounted
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: AppColors.accentRed));
                               }
                             },
                             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                              const PopupMenuItem<String>(value: 'view', child: Text('Lihat Detail')),
-                              const PopupMenuItem<String>(value: 'edit', child: Text('Edit')),
-                              PopupMenuItem<String>(value: 'toggle', child: Text(user.isActive ? 'Nonaktifkan' : 'Aktifkan')),
-                              const PopupMenuItem<String>(value: 'delete', child: Text('Hapus', style: TextStyle(color: AppColors.accentRed))),
+                              const PopupMenuItem<String>(value: 'view', child: ListTile(leading: Icon(Icons.visibility_outlined), title: Text('Lihat Detail'))),
+                              const PopupMenuItem<String>(value: 'edit', child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Edit'))),
+                              PopupMenuItem<String>(
+                                value: 'toggle', 
+                                child: ListTile(
+                                  leading: Icon(user.isActive ? Icons.toggle_off_outlined : Icons.toggle_on_outlined), 
+                                  title: Text(user.isActive ? 'Nonaktifkan' : 'Aktifkan')
+                                ),
+                              ),
+                              const PopupMenuDivider(),
+                              const PopupMenuItem<String>(
+                                value: 'delete', 
+                                child: ListTile(
+                                  leading: Icon(Icons.delete_forever_outlined, color: AppColors.accentRed), 
+                                  title: Text('Hapus', style: TextStyle(color: AppColors.accentRed))
+                                ),
+                              ),
                             ],
                           ),
                   ),
@@ -215,6 +308,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         label: const Text('Tambah Pengguna'),
         icon: const Icon(Icons.add),
         backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white, 
       ),
     );
   }

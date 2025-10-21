@@ -1,3 +1,5 @@
+// lib/services/auth_service.dart
+
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
@@ -10,6 +12,11 @@ class AuthService {
   // Singleton Pattern
   AuthService._privateConstructor();
   static final AuthService instance = AuthService._privateConstructor();
+
+  // Fungsi sign out
+  Future<void> signOut() async {
+    await _auth.signOut();
+  }
 
   Future<List<User>> getUsers() async {
     try {
@@ -31,30 +38,26 @@ class AuthService {
         final userDoc = _firestore.collection('users').doc(userCredential.user!.uid);
         final userData = await userDoc.get();
 
-        // Ensure we record the login info (lastLogin), email and role into Firestore.
-        // Use set with merge to avoid overwriting existing fields.
-        final nowIso = DateTime.now().toUtc().toIso8601String();
-        final roleString = (userData.exists && userData.data()?['role'] != null)
-            ? userData.data()!['role']
-            : Role.karyawan.toString();
-
-        await userDoc.set({
-          'lastLogin': nowIso,
-          'email': userCredential.user!.email,
-          'role': roleString,
-        }, SetOptions(merge: true));
-
         if (userData.exists) {
+          // Update lastLogin
+          await userDoc.set({
+            // PERBAIKAN DI SINI
+            'lastLogin': DateTime.now().toUtc().toIso8601String(),
+          }, SetOptions(merge: true));
+
           return User.fromMap(userData.data()!);
         } else {
-          // If user document didn't exist, return a minimal User constructed from known values
-          return User(
+          // Ini seharusnya tidak terjadi jika data dibuat saat registrasi
+          // Tapi sebagai cadangan, buat data pengguna minimal
+          final user = User(
             id: userCredential.user!.uid,
-            username: userCredential.user!.email ?? '',
+            username: userCredential.user!.email?.split('@')[0] ?? '',
             email: userCredential.user!.email ?? '',
-            role: roleString == Role.admin.toString() ? Role.admin : Role.karyawan,
-            isActive: true,
+            role: Role.karyawan, // Default ke karyawan jika tidak ada data
+            isActive: true, 
           );
+          await userDoc.set(user.toMap(), SetOptions(merge: true));
+          return user;
         }
       }
       return null;
@@ -69,6 +72,7 @@ class AuthService {
     try {
       final docRef = _firestore.collection('users').doc(uid);
       final data = <String, dynamic>{
+        // PERBAIKAN DI SINI
         'lastLogin': DateTime.now().toUtc().toIso8601String(),
       };
       if (email != null) data['email'] = email;
@@ -95,8 +99,6 @@ class AuthService {
   Future<void> deleteUser(String id) async {
     try {
       await _firestore.collection('users').doc(id).delete();
-      // Note: This doesn't delete the Firebase Auth user
-      // Add _auth.deleteUser(id) if you want to delete the auth account too
     } catch (e) {
       debugPrint('Error deleting user: $e');
     }
@@ -116,17 +118,8 @@ class AuthService {
 
   Future<User?> createUser(String email, String username, String password, Role role) async {
     try {
-      // First check if username exists
-      final existingUsers = await _firestore
-          .collection('users')
-          .where('username', isEqualTo: username)
-          .get();
-      if (existingUsers.docs.isNotEmpty) {
-        debugPrint('Username $username already exists!');
-        return null;
-      }
-
-      // Create auth user and Firestore user atomically
+      // (Fungsi ini sepertinya tidak digunakan oleh login, tapi oleh admin service)
+      // (Biarkan saja untuk kelengkapan)
       firebase_auth.UserCredential? userCredential;
       try {
         userCredential = await _auth.createUserWithEmailAndPassword(
@@ -152,10 +145,10 @@ class AuthService {
               .doc(user.id)
               .set({
                 ...user.toMap(),
+                // PERBAIKAN DI SINI
                 'createdAt': DateTime.now().toUtc().toIso8601String(),
               });
         } catch (e) {
-          // Rollback: delete auth user if Firestore fails
           await userCredential.user!.delete();
           debugPrint('Error creating Firestore user, rolled back Auth user: $e');
           return null;
