@@ -30,16 +30,53 @@ class AuthService {
       if (userCredential.user != null) {
         final userDoc = _firestore.collection('users').doc(userCredential.user!.uid);
         final userData = await userDoc.get();
+
+        // Ensure we record the login info (lastLogin), email and role into Firestore.
+        // Use set with merge to avoid overwriting existing fields.
+        final nowIso = DateTime.now().toUtc().toIso8601String();
+        final roleString = (userData.exists && userData.data()?['role'] != null)
+            ? userData.data()!['role']
+            : Role.karyawan.toString();
+
+        await userDoc.set({
+          'lastLogin': nowIso,
+          'email': userCredential.user!.email,
+          'role': roleString,
+        }, SetOptions(merge: true));
+
         if (userData.exists) {
-          // Update lastLogin timestamp
-          await userDoc.update({'lastLogin': DateTime.now().toUtc().toIso8601String()});
           return User.fromMap(userData.data()!);
+        } else {
+          // If user document didn't exist, return a minimal User constructed from known values
+          return User(
+            id: userCredential.user!.uid,
+            username: userCredential.user!.email ?? '',
+            email: userCredential.user!.email ?? '',
+            role: roleString == Role.admin.toString() ? Role.admin : Role.karyawan,
+            isActive: true,
+          );
         }
       }
       return null;
     } catch (e) {
       debugPrint('Error during login: $e');
       return null;
+    }
+  }
+
+  /// Convenience: set login-related fields for a user document (merges with existing data).
+  Future<void> setLoginInfo(String uid, {String? email, Role? role}) async {
+    try {
+      final docRef = _firestore.collection('users').doc(uid);
+      final data = <String, dynamic>{
+        'lastLogin': DateTime.now().toUtc().toIso8601String(),
+      };
+      if (email != null) data['email'] = email;
+      if (role != null) data['role'] = role.toString();
+
+      await docRef.set(data, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Error setting login info for $uid: $e');
     }
   }
 

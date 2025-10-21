@@ -53,7 +53,7 @@ class Pesanan {
 }
 
 // --- PERUBAHAN DI SINI ---
-enum Role { pemilik, karyawan }
+enum Role { admin, karyawan }
 
 class User {
   String id;
@@ -61,6 +61,7 @@ class User {
   String email;
   Role role;
   bool isActive;
+  bool isDeleted;
 
   User({
     required this.id,
@@ -68,6 +69,7 @@ class User {
     required this.email,
     required this.role,
     this.isActive = true,
+    this.isDeleted = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -77,6 +79,7 @@ class User {
       'email': email,
       'role': role.toString(),
       'isActive': isActive,
+      'isDeleted': isDeleted,
     };
   }
 
@@ -85,8 +88,11 @@ class User {
       id: map['id'],
       username: map['username'],
       email: map['email'],
-      role: map['role'] == Role.pemilik.toString() ? Role.pemilik : Role.karyawan,
+      role: (map['role'] == Role.admin.toString() || map['role'] == 'Role.admin')
+          ? Role.admin
+          : Role.karyawan,
       isActive: map['isActive'] ?? true,
+      isDeleted: map['isDeleted'] ?? false,
     );
   }
 }

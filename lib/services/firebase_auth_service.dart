@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:flutter/foundation.dart' show debugPrint;
 import '../models/models.dart';
 
 class FirebaseAuthService {
@@ -23,13 +24,13 @@ class FirebaseAuthService {
           id: firebaseUser.uid,
           username: email.split('@')[0], // Using email prefix as username
           email: email,
-          role: Role.pemilik, // You might want to store this in Firestore
+          role: Role.admin, // You might want to store this in Firestore
           isActive: true,
         );
       }
       return null;
     } catch (e) {
-      print('Error signing in: $e');
+      debugPrint('Error signing in: $e');
       return null;
     }
   }
@@ -48,7 +49,7 @@ class FirebaseAuthService {
           id: firebaseUser.uid,
           username: email.split('@')[0],
           email: email,
-          role: Role.pemilik,
+          role: Role.admin,
           isActive: true,
         );
         // Here you can store additional user data in Firestore
@@ -56,7 +57,7 @@ class FirebaseAuthService {
       }
       return null;
     } catch (e) {
-      print('Error signing up: $e');
+      debugPrint('Error signing up: $e');
       return null;
     }
   }
@@ -74,7 +75,7 @@ class FirebaseAuthService {
         id: firebaseUser.uid,
         username: firebaseUser.email?.split('@')[0] ?? '',
         email: firebaseUser.email ?? '',
-        role: Role.pemilik,
+        role: Role.admin,
         isActive: true,
       );
     }
@@ -94,7 +95,7 @@ class FirebaseAuthService {
         id: firebaseUser.uid,
         username: firebaseUser.email?.split('@')[0] ?? '',
         email: firebaseUser.email ?? '',
-        role: Role.pemilik,
+        role: Role.admin,
         isActive: true,
       );
     });

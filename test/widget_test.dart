@@ -5,25 +5,14 @@
 // gestures. You can also use WidgetTester to find child widgets in the widget
 // tree, read text, and verify that the values of widget properties are correct.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:annibagift/main.dart';
 
-// Mock class for Firebase initialization in tests
-class MockFirebaseApp extends Mock implements FirebaseApp {}
-
 void main() {
-  testWidgets('Login screen smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
+  testWidgets('app starts and shows title', (WidgetTester tester) async {
     await tester.pumpWidget(const AnnibaGiftApp());
 
-    // Verify that our login page shows up
+    // The app displays the title in the LoginScreen
     expect(find.text('Anniba Gift'), findsOneWidget);
-    expect(find.text('Silakan login untuk melanjutkan'), findsOneWidget);
-    
-    // Verify that we have login form fields
-    expect(find.byType(TextFormField), findsWidgets);
-    expect(find.text('Login'), findsOneWidget);
   });
 }

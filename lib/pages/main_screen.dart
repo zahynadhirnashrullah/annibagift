@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../models/models.dart';
-import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import 'dashboard.dart';
 import 'pencatatan.dart';
@@ -56,25 +55,7 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   // --- FUNGSI-FUNGSI MANAJEMEN PENGGUNA ---
-  Future<void> _addUser(String email, String username, String password, Role role) async {
-    await AuthService.instance.createUser(email, username, password, role);
-    setState(() {});
-  }
-
-  Future<void> _updateUser(String id, {String? username, Role? role}) async {
-    await AuthService.instance.updateUser(id, username: username, role: role);
-    setState(() {});
-  }
-
-  Future<void> _deleteUser(String id) async {
-    await AuthService.instance.deleteUser(id);
-    setState(() {});
-  }
-
-  Future<void> _toggleUserStatus(String id) async {
-    await AuthService.instance.toggleUserStatus(id);
-    setState(() {});
-  }
+  // User management is handled inside `UserManagementScreen` via FirebaseAdminService.
 
   // --- FUNGSI MANAJEMEN STOK, SEWA, PESANAN ---
   void _kurangiStok(List<OrderItem> items) {
@@ -195,12 +176,8 @@ class _MainScreenState extends State<MainScreen> {
       const BottomNavigationBarItem(icon: Icon(Icons.list_alt_rounded), label: "Pesanan"),
     ];
 
-    if (widget.currentUser.role == Role.pemilik) {
+    if (widget.currentUser.role == Role.admin) {
       pages.add(UserManagementScreen(
-        addUser: _addUser,
-        updateUser: _updateUser,
-        deleteUser: _deleteUser,
-        toggleUserStatus: _toggleUserStatus,
         currentUser: widget.currentUser,
       ));
       navItems.add(const BottomNavigationBarItem(
@@ -212,41 +189,43 @@ class _MainScreenState extends State<MainScreen> {
         index: _selectedIndex,
         children: pages,
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(24),
-            topRight: Radius.circular(24),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withAlpha((0.2 * 255).round()),
-              spreadRadius: 5,
-              blurRadius: 15,
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(24),
-            topRight: Radius.circular(24),
-          ),
-          child: BottomNavigationBar(
-            currentIndex: _selectedIndex,
-            onTap: _onItemTapped,
-            type: BottomNavigationBarType.fixed,
-            selectedItemColor: AppColors.primary,
-            unselectedItemColor: Colors.grey.shade400,
-            backgroundColor: Colors.white,
-            elevation: 0,
-            selectedLabelStyle:
-                const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-            unselectedLabelStyle: const TextStyle(fontSize: 12),
-            items: navItems,
-          ),
-        ),
-      ),
+      bottomNavigationBar: widget.currentUser.role == Role.admin
+          ? Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withAlpha((0.2 * 255).round()),
+                    spreadRadius: 5,
+                    blurRadius: 15,
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(24),
+                  topRight: Radius.circular(24),
+                ),
+                child: BottomNavigationBar(
+                  currentIndex: _selectedIndex,
+                  onTap: _onItemTapped,
+                  type: BottomNavigationBarType.fixed,
+                  selectedItemColor: AppColors.primary,
+                  unselectedItemColor: Colors.grey.shade400,
+                  backgroundColor: Colors.white,
+                  elevation: 0,
+                  selectedLabelStyle:
+                      const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  unselectedLabelStyle: const TextStyle(fontSize: 12),
+                  items: navItems,
+                ),
+              ),
+            )
+          : null,
     );
   }
 }

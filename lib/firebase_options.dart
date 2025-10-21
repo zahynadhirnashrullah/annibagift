@@ -47,30 +47,33 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCzsR-OQKnGBjOlK-yrCWtJPsO8_U8-mng',
-    appId: '1:36004632059:android:3d4a6f3904ebecea59675e',
-    messagingSenderId: '36004632059',
-    projectId: 'anniba-gift',
-    storageBucket: 'anniba-gift.firebasestorage.app',
+  apiKey: 'AIzaSyCzsR-OQKnGBjOlK-yrCWtJPsO8_U8-mng',
+  appId: '1:36004632059:android:3d4a6f3904ebecea59675e',
+  messagingSenderId: '36004632059',
+  projectId: 'anniba-gift',
+  storageBucket: 'anniba-gift.firebasestorage.app',
+  databaseURL: 'https://anniba-gift-default-rtdb.firebaseio.com/',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyCorEtn_qjhujWQvo8YSrEgR5zPRRTzssA',
-    appId: '1:36004632059:ios:574a0523fd32222e59675e',
-    messagingSenderId: '36004632059',
-    projectId: 'anniba-gift',
-    storageBucket: 'anniba-gift.firebasestorage.app',
-    iosBundleId: 'com.example.annibagift',
+  apiKey: 'AIzaSyCorEtn_qjhujWQvo8YSrEgR5zPRRTzssA',
+  appId: '1:36004632059:ios:574a0523fd32222e59675e',
+  messagingSenderId: '36004632059',
+  projectId: 'anniba-gift',
+  storageBucket: 'anniba-gift.firebasestorage.app',
+  iosBundleId: 'com.example.annibagift',
+  databaseURL: 'https://anniba-gift-default-rtdb.firebaseio.com/',
   );
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyCl_RVezREtscyTz-bWkbaMC94pknZmM5E',
-    appId: '1:36004632059:web:9974417014fbe58659675e',
-    messagingSenderId: '36004632059',
-    projectId: 'anniba-gift',
-    authDomain: 'anniba-gift.firebaseapp.com',
-    storageBucket: 'anniba-gift.firebasestorage.app',
-    measurementId: 'G-V2BL5E78V2',
+  apiKey: 'AIzaSyCl_RVezREtscyTz-bWkbaMC94pknZmM5E',
+  appId: '1:36004632059:web:9974417014fbe58659675e',
+  messagingSenderId: '36004632059',
+  projectId: 'anniba-gift',
+  authDomain: 'anniba-gift.firebaseapp.com',
+  storageBucket: 'anniba-gift.firebasestorage.app',
+  measurementId: 'G-V2BL5E78V2',
+  databaseURL: 'https://anniba-gift-default-rtdb.firebaseio.com/',
   );
 
 }
