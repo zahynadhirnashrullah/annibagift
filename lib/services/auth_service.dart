@@ -2,12 +2,15 @@
 
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import '../models/models.dart';
+import 'package:bcrypt/bcrypt.dart';
 
 class AuthService {
   final firebase_auth.FirebaseAuth _auth = firebase_auth.FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseDatabase _database = FirebaseDatabase.instance;
   
   // Singleton Pattern
   AuthService._privateConstructor();
@@ -30,36 +33,70 @@ class AuthService {
 
   Future<User?> login(String email, String password) async {
     try {
-      final userCredential = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      if (userCredential.user != null) {
-        final userDoc = _firestore.collection('users').doc(userCredential.user!.uid);
-        final userData = await userDoc.get();
+      // First, check global setting whether karyawan logins are disabled
+      bool karyawanDisabled = false;
+      try {
+        final settingSnap = await _database.ref('settings/karyawan_login_disabled').get();
+        if (settingSnap.exists && settingSnap.value == true) karyawanDisabled = true;
+      } catch (_) {}
 
-        if (userData.exists) {
-          // Update lastLogin
-          await userDoc.set({
-            // PERBAIKAN DI SINI
-            'lastLogin': DateTime.now().toUtc().toIso8601String(),
-          }, SetOptions(merge: true));
+      // Try to find user in RTDB by email
+      try {
+        final querySnap = await _database.ref('users').orderByChild('email').equalTo(email).get();
+        if (querySnap.exists && querySnap.value is Map) {
+          final mapAll = Map<String, dynamic>.from(querySnap.value as Map);
+          if (mapAll.isNotEmpty) {
+            final entry = mapAll.entries.first;
+            final uid = entry.key;
+            final map = Map<String, dynamic>.from(entry.value as Map);
+            final roleStr = map['role'] as String? ?? '';
 
-          return User.fromMap(userData.data()!);
-        } else {
-          // Ini seharusnya tidak terjadi jika data dibuat saat registrasi
-          // Tapi sebagai cadangan, buat data pengguna minimal
-          final user = User(
-            id: userCredential.user!.uid,
-            username: userCredential.user!.email?.split('@')[0] ?? '',
-            email: userCredential.user!.email ?? '',
-            role: Role.karyawan, // Default ke karyawan jika tidak ada data
-            isActive: true, 
-          );
-          await userDoc.set(user.toMap(), SetOptions(merge: true));
-          return user;
+            if (map['isDeleted'] == true) return null;
+            if (karyawanDisabled && roleStr.contains('karyawan')) return null;
+
+            final storedHash = map['passwordHash'] as String?;
+            if (storedHash == null) return null;
+            // Verify bcrypt
+            final ok = BCrypt.checkpw(password, storedHash);
+            if (!ok) return null;
+
+            // Update lastLogin
+            try {
+              await _database.ref('users/$uid').update({'lastLogin': DateTime.now().toUtc().toIso8601String()});
+            } catch (_) {}
+
+            return User.fromMap({...map, 'id': uid});
+          }
         }
+      } catch (_) {}
+
+      // Fallback to Firestore lookup by email
+      try {
+        final q = await _firestore.collection('users').where('email', isEqualTo: email).limit(1).get();
+        if (q.docs.isNotEmpty) {
+          final doc = q.docs.first;
+          final map = doc.data();
+          final roleStr = map['role'] as String? ?? '';
+          if ((map['isDeleted'] ?? false) == true) return null;
+          if (karyawanDisabled && roleStr.contains('karyawan')) return null;
+
+          final storedHash = map['passwordHash'] as String?;
+          if (storedHash == null) return null;
+          final ok = BCrypt.checkpw(password, storedHash);
+          if (!ok) return null;
+
+          // Update lastLogin
+          try {
+            await _firestore.collection('users').doc(doc.id).set({'lastLogin': DateTime.now().toUtc().toIso8601String()}, SetOptions(merge: true));
+          } catch (_) {}
+
+          return User.fromMap({...map, 'id': doc.id});
+        }
+      } catch (e) {
+        debugPrint('Error during login DB lookup: $e');
       }
+
+      // User not found or auth failed
       return null;
     } catch (e) {
       debugPrint('Error during login: $e');

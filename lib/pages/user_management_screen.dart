@@ -26,8 +26,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   @override
   void initState() {
     super.initState();
-    // PERBAIKAN: Menggunakan getUsersStream() (Firestore)
-    _usersStream = _adminService.getUsersStream();
+  // Use RTDB stream
+  _usersStream = _adminService.getUsersStreamRTDB();
   }
 
   void _showUserFormDialog({User? user}) {
@@ -98,6 +98,22 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       },
                   ),
                   const SizedBox(height: 16),
+                  if (isEditing) ...[
+                    buildTextField(
+                      passwordController,
+                      'Reset Password (kosongkan jika tidak diubah)',
+                      Icons.lock_outline,
+                      isObscure: true,
+                      validator: (value) {
+                        if (value != null && value.isNotEmpty && value.length < 6) {
+                          return 'Password minimal 6 karakter';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  const SizedBox(height: 16),
                   if (!isEditing) ...[
                     buildTextField(
                       passwordController, 
@@ -138,34 +154,50 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     isEditing ? 'Simpan Perubahan' : 'Tambahkan Pengguna',
                     Icons.save_rounded,
                     () async {
-                      if (formKey.currentState!.validate()) {
-                        try {
-                          if (isEditing) {
-                            await _adminService.updateUser(user!.id, username: usernameController.text, role: selectedRole);
-                            
-                            if (!mounted) return; // <-- PERBAIKAN: Cek mounted
-                            Navigator.of(sheetContext).pop(); 
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pengguna berhasil diperbarui'), backgroundColor: AppColors.accentGreen));
-                          } else {
-                            final created = await _adminService.createUser(emailController.text, passwordController.text, usernameController.text, selectedRole);
-                            
-                            if (!mounted) return; // <-- PERBAIKAN: Cek mounted
+                      final isValid = formKey.currentState?.validate() ?? false;
+                      if (!isValid) return;
 
-                            if (created != null) {
-                              Navigator.of(sheetContext).pop(); 
-                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pengguna berhasil dibuat'), backgroundColor: AppColors.accentGreen));
-                              
-                              Navigator.of(context).push(
-                                MaterialPageRoute(builder: (context) => UserDetailScreen(userId: created.id)),
-                              );
+                      try {
+                        if (isEditing) {
+                          final User editingUser = user; // promote to non-null local variable
+                          await _adminService.updateUser(editingUser.id, username: usernameController.text, role: selectedRole);
+
+                          // If a reset password was provided, update the stored passwordHash
+                          if (passwordController.text.isNotEmpty) {
+                            final ok = await _adminService.updateUserPasswordHash(editingUser.id, passwordController.text);
+                            if (ok) {
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password pengguna diperbarui di database'), backgroundColor: AppColors.accentGreen));
                             } else {
-                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Gagal membuat pengguna'), backgroundColor: AppColors.accentRed));
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Gagal memperbarui password di database'), backgroundColor: AppColors.accentRed));
                             }
                           }
-                        } catch (e) {
-                           if (!mounted) return; // <-- PERBAIKAN: Cek mounted
-                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: AppColors.accentRed));
+
+                          if (!mounted) return;
+                          Navigator.of(context).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pengguna berhasil diperbarui'), backgroundColor: AppColors.accentGreen));
+                        } else {
+                          final created = await _adminService.createUser(emailController.text, passwordController.text, usernameController.text, selectedRole);
+
+                          if (!mounted) return;
+
+                          if (created != null) {
+                            Navigator.of(context).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pengguna berhasil dibuat'), backgroundColor: AppColors.accentGreen));
+
+                            if (!mounted) return;
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (ctx) => UserDetailScreen(userId: created.id)),
+                            );
+                          } else {
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Gagal membuat pengguna'), backgroundColor: AppColors.accentRed));
+                          }
                         }
+                      } catch (e) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: AppColors.accentRed));
                       }
                     },
                   ),
@@ -233,6 +265,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                           )
                         : PopupMenuButton<String>(
                             onSelected: (value) async {
+                              final messenger = ScaffoldMessenger.of(context);
                               try {
                                 if (value == 'view') {
                                   Navigator.push(
@@ -244,11 +277,15 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                 } else if (value == 'edit') {
                                   _showUserFormDialog(user: user);
                                 } else if (value == 'toggle') {
+                                  if (!mounted) return;
+                                  final messenger = ScaffoldMessenger.of(context);
                                   await _adminService.toggleUserStatus(user.id);
-                                  
-                                  if (!mounted) return; // <-- PERBAIKAN: Cek mounted
-                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Status ${user.username} diubah'), backgroundColor: AppColors.accentGreen));
+
+                                  if (!mounted) return;
+                                  messenger.showSnackBar(SnackBar(content: Text('Status ${user.username} diubah'), backgroundColor: AppColors.accentGreen));
                                 } else if (value == 'delete') {
+                                  if (!mounted) return;
+                                  final messenger = ScaffoldMessenger.of(context);
                                   final confirm = await showDialog<bool>(
                                     context: context,
                                     builder: (ctx) => AlertDialog(
@@ -261,18 +298,18 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                     ),
                                   );
 
-                                  if (!mounted) return; // <-- PERBAIKAN: Cek mounted
+                                  if (!mounted) return;
 
                                   if (confirm == true) {
                                     await _adminService.softDeleteUser(user.id);
-                                    
-                                    if (!mounted) return; // <-- PERBAIKAN: Cek mounted
-                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${user.username} telah dihapus'), backgroundColor: AppColors.accentGreen));
+
+                                    if (!mounted) return;
+                                    messenger.showSnackBar(SnackBar(content: Text('${user.username} telah dihapus'), backgroundColor: AppColors.accentGreen));
                                   }
                                 }
                               } catch (e) {
-                                if (!mounted) return; // <-- PERBAIKAN: Cek mounted
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: AppColors.accentRed));
+                                if (!mounted) return;
+                                messenger.showSnackBar(SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: AppColors.accentRed));
                               }
                             },
                             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
