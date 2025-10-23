@@ -1,7 +1,7 @@
 // lib/screens/login_screen.dart
 import 'package:flutter/material.dart';
 // Import service yang benar
-import '../services/auth_service.dart'; 
+import '../services/auth_service.dart';
 import '../services/firebase_admin_service.dart'; // Import admin service
 import '../theme/app_theme.dart';
 import '../widgets/shared_widgets.dart';
@@ -30,7 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
       try {
         final email = _emailController.text;
         final password = _passwordController.text;
-        
+
         // Ganti ke AuthService.instance.login
         final user = await AuthService.instance.login(
           email,
@@ -40,7 +40,7 @@ class _LoginScreenState extends State<LoginScreen> {
         if (user != null) {
           // Cek apakah user aktif
           if (!user.isActive) {
-             if (!mounted) return;
+            if (!mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Akun Anda telah dinonaktifkan. Hubungi admin.'),
@@ -54,7 +54,7 @@ class _LoginScreenState extends State<LoginScreen> {
               await FirebaseAdminService.instance.loginAsAdmin(email, password);
             }
 
-             if (!mounted) return;
+            if (!mounted) return;
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
@@ -106,29 +106,14 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 SizedBox(height: MediaQuery.of(context).size.height * 0.1),
-                const Icon(
-                  Icons.card_giftcard_rounded,
-                  size: 80,
-                  color: Colors.white,
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Anniba Gift',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Silakan login untuk melanjutkan',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white.withValues(red: 255, green: 255, blue: 255, alpha: 204),
-                    fontSize: 16,
+                // --- BAGIAN YANG DIMODIFIKASI: Mengganti Icon dengan Image.asset ---
+                Center(
+                  child: Image.asset(
+                    'assets/LogoAnnibaTransparant.png',
+                    height: 300, // Menyesuaikan ukuran agar terlihat baik
+                    width: 300,
+                    // Karena background gradient-nya berwarna, pastikan
+                    // logo Anda sudah transparan dan memiliki warna yang kontras (putih/terang)
                   ),
                 ),
                 SizedBox(height: MediaQuery.of(context).size.height * 0.1),
@@ -185,12 +170,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 32),
                         _isLoading
-                          ? const CircularProgressIndicator()
-                          : buildGradientButton(
-                              'Login', 
-                              Icons.login_rounded, 
-                              _login,
-                            ),
+                            ? const CircularProgressIndicator()
+                            : buildGradientButton(
+                                'Login',
+                                Icons.login_rounded,
+                                _login,
+                              ),
                       ],
                     ),
                   ),
