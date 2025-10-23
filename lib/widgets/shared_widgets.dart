@@ -5,6 +5,9 @@ import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
 import '../models/models.dart';
 
+// (Fungsi buildGradientButton, buildTextField, EmptyStateWidget, InfoRow tidak berubah)
+// ... Salin kode Anda sebelumnya untuk fungsi-fungsi ini ...
+
 Widget buildGradientButton(String text, IconData icon, VoidCallback onPressed) {
   return Container(
     width: double.infinity,
@@ -20,7 +23,7 @@ Widget buildGradientButton(String text, IconData icon, VoidCallback onPressed) {
           color: AppColors.primary.withAlpha((0.3 * 255).round()),
           blurRadius: 10,
           offset: const Offset(0, 4),
-        )
+        ),
       ],
     ),
     child: ElevatedButton.icon(
@@ -44,13 +47,15 @@ Widget buildTextField(
   bool isObscure = false,
   TextInputType? keyboardType,
   String? Function(String?)? validator,
-  bool readOnly = false, // <-- PERBAIKAN: Ditambahkan
+  bool readOnly = false,
+  int maxLines = 1,
 }) {
   return TextFormField(
     controller: controller,
     obscureText: isObscure,
     keyboardType: keyboardType,
-    readOnly: readOnly, // <-- PERBAIKAN: Diterapkan di sini
+    readOnly: readOnly,
+    maxLines: maxLines,
     decoration: InputDecoration(
       labelText: label,
       prefixIcon: Icon(icon),
@@ -58,19 +63,34 @@ Widget buildTextField(
       filled: true,
       fillColor: Colors.white,
     ),
-    validator: validator ?? (value) {
-        if (value == null || value.isEmpty) {
-          return '$label tidak boleh kosong';
-        }
-        return null;
-      },
+    validator:
+        validator ??
+        (value) {
+          if (value == null || value.isEmpty) {
+            // Validasi khusus untuk harga dan durasi agar bisa 0
+            if (label == 'Total Harga' || label.contains('Durasi')) {
+              if (value != null &&
+                  value.isNotEmpty &&
+                  double.tryParse(value) == null) {
+                return 'Masukkan angka yang valid';
+              }
+              return null; // Boleh kosong atau 0
+            }
+            return '$label tidak boleh kosong';
+          }
+          return null;
+        },
   );
 }
 
 class EmptyStateWidget extends StatelessWidget {
   final String message;
   final IconData icon;
-  const EmptyStateWidget({super.key, required this.message, required this.icon});
+  const EmptyStateWidget({
+    super.key,
+    required this.message,
+    required this.icon,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -108,6 +128,8 @@ class InfoRow extends StatelessWidget {
   }
 }
 
+// === PERUBAHAN PENTING DI SINI ===
+
 class SewaListTile extends StatelessWidget {
   final Sewa item;
   final VoidCallback onDelete;
@@ -131,17 +153,42 @@ class SewaListTile extends StatelessWidget {
               children: [
                 Text(item.nama, style: AppTextStyles.subtitle),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline_rounded, color: AppColors.accentRed),
+                  icon: const Icon(
+                    Icons.delete_outline_rounded,
+                    color: AppColors.accentRed,
+                  ),
                   onPressed: onDelete,
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            ...item.items.map((orderItem) => Text('• ${orderItem.namaBarang} (x${orderItem.jumlah})', style: AppTextStyles.body.copyWith(color: AppColors.textPrimary))),
+
+            // --- PERUBAHAN: Menampilkan Keterangan ---
+            Text(
+              item.keterangan,
+              style: AppTextStyles.body.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
             const Divider(height: 24),
-            InfoRow(icon: Icons.calendar_today_outlined, text: DateFormat('d MMM yyyy').format(item.tanggal)),
+
+            InfoRow(icon: Icons.phone_outlined, text: item.noHp),
+            InfoRow(
+              icon: Icons.receipt_long_outlined,
+              text:
+                  "Rp ${NumberFormat.decimalPattern('id_ID').format(item.totalHarga)}",
+            ),
+            InfoRow(
+              icon: Icons.calendar_today_outlined,
+              text: "Kembali: ${DateFormat('d MMM yyyy').format(item.tanggal)}",
+            ),
             InfoRow(icon: Icons.timer_outlined, text: "${item.durasi} hari"),
-            InfoRow(icon: Icons.security_outlined, text: "Jaminan: ${item.jaminan}"),
+            InfoRow(
+              icon: Icons.security_outlined,
+              text: "Jaminan: ${item.jaminan}",
+            ),
           ],
         ),
       ),
@@ -153,7 +200,11 @@ class PesananListTile extends StatelessWidget {
   final Pesanan item;
   final VoidCallback onDelete;
 
-  const PesananListTile({super.key, required this.item, required this.onDelete});
+  const PesananListTile({
+    super.key,
+    required this.item,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -172,16 +223,34 @@ class PesananListTile extends StatelessWidget {
               children: [
                 Text(item.nama, style: AppTextStyles.subtitle),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline_rounded, color: AppColors.accentRed),
+                  icon: const Icon(
+                    Icons.delete_outline_rounded,
+                    color: AppColors.accentRed,
+                  ),
                   onPressed: onDelete,
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            ...item.items.map((orderItem) => Text('• ${orderItem.namaBarang} (x${orderItem.jumlah})', style: AppTextStyles.body.copyWith(color: AppColors.textPrimary))),
+
+            // --- PERUBAHAN: Menampilkan Keterangan ---
+            Text(
+              item.keterangan,
+              style: AppTextStyles.body.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
             const Divider(height: 24),
-            InfoRow(icon: Icons.calendar_today_outlined, text: DateFormat('d MMM yyyy').format(item.tanggal)),
+
+            InfoRow(icon: Icons.phone_outlined, text: item.noHp),
             InfoRow(icon: Icons.location_on_outlined, text: item.alamat),
+            InfoRow(
+              icon: Icons.receipt_long_outlined,
+              text:
+                  "Rp ${NumberFormat.decimalPattern('id_ID').format(item.totalHarga)}",
+            ),
           ],
         ),
       ),
@@ -189,12 +258,20 @@ class PesananListTile extends StatelessWidget {
   }
 }
 
+// (StokListTile dan StatCard tidak berubah)
+// ... Salin kode Anda sebelumnya untuk Widget di bawah ini ...
+
 class StokListTile extends StatelessWidget {
   final StokItem item;
   final VoidCallback onEdit;
   final VoidCallback onRestock;
 
-  const StokListTile({super.key, required this.item, required this.onEdit, required this.onRestock});
+  const StokListTile({
+    super.key,
+    required this.item,
+    required this.onEdit,
+    required this.onRestock,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -209,7 +286,10 @@ class StokListTile extends StatelessWidget {
           children: [
             CircleAvatar(
               backgroundColor: AppColors.primary.withAlpha((0.1 * 255).round()),
-              child: const Icon(Icons.inventory_2_rounded, color: AppColors.primary),
+              child: const Icon(
+                Icons.inventory_2_rounded,
+                color: AppColors.primary,
+              ),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -232,11 +312,17 @@ class StokListTile extends StatelessWidget {
               itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
                 const PopupMenuItem<String>(
                   value: 'edit',
-                  child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Edit')),
+                  child: ListTile(
+                    leading: Icon(Icons.edit_outlined),
+                    title: Text('Edit'),
+                  ),
                 ),
                 const PopupMenuItem<String>(
                   value: 'restock',
-                  child: ListTile(leading: Icon(Icons.add_shopping_cart_rounded), title: Text('Restock')),
+                  child: ListTile(
+                    leading: Icon(Icons.add_shopping_cart_rounded),
+                    title: Text('Restock'),
+                  ),
                 ),
               ],
             ),
@@ -265,8 +351,6 @@ class StatCard extends StatelessWidget {
     this.isFullWidth = false,
   });
 
-  // PERBAIKAN: Fungsi duplikat buildTextField dan buildGradientButton dihapus dari sini
-
   @override
   Widget build(BuildContext context) {
     return InkWell(
@@ -287,12 +371,17 @@ class StatCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(label, style: AppTextStyles.body.copyWith(color: AppColors.textPrimary)),
+                        Text(
+                          label,
+                          style: AppTextStyles.body.copyWith(
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
                         const SizedBox(height: 4),
                         Text(value, style: AppTextStyles.heading2),
                       ],
                     ),
-                  )
+                  ),
                 ],
               )
             : Column(
@@ -300,7 +389,12 @@ class StatCard extends StatelessWidget {
                 children: [
                   Icon(icon, color: color, size: 32),
                   const SizedBox(height: 12),
-                  Text(label, style: AppTextStyles.body.copyWith(color: AppColors.textPrimary)),
+                  Text(
+                    label,
+                    style: AppTextStyles.body.copyWith(
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
                   const SizedBox(height: 4),
                   Text(value, style: AppTextStyles.heading2),
                 ],

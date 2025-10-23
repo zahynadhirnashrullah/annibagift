@@ -23,16 +23,20 @@ class StokItem {
 class Sewa {
   final String nama;
   final String alamat;
+  final String noHp;
   final DateTime tanggal;
-  final List<OrderItem> items;
+  final String keterangan;
+  final double totalHarga;
   final int durasi;
   final String jaminan;
 
   Sewa({
     required this.nama,
     required this.alamat,
+    required this.noHp,
     required this.tanggal,
-    required this.items,
+    required this.totalHarga,
+    required this.keterangan,
     required this.durasi,
     required this.jaminan,
   });
@@ -41,14 +45,16 @@ class Sewa {
 class Pesanan {
   final String nama;
   final String alamat;
-  final DateTime tanggal;
-  final List<OrderItem> items;
+  final String noHp;
+  final double totalHarga;
+  final String keterangan;
 
   Pesanan({
     required this.nama,
     required this.alamat,
-    required this.tanggal,
-    required this.items,
+    required this.noHp,
+    required this.totalHarga,
+    required this.keterangan,
   });
 }
 
@@ -88,7 +94,8 @@ class User {
       id: map['id'],
       username: map['username'],
       email: map['email'],
-      role: (map['role'] == Role.admin.toString() || map['role'] == 'Role.admin')
+      role:
+          (map['role'] == Role.admin.toString() || map['role'] == 'Role.admin')
           ? Role.admin
           : Role.karyawan,
       isActive: map['isActive'] ?? true,

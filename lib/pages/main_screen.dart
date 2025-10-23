@@ -17,10 +17,7 @@ import '../services/firebase_admin_service.dart';
 class MainScreen extends StatefulWidget {
   final User currentUser;
 
-  const MainScreen({
-    super.key,
-    required this.currentUser,
-  });
+  const MainScreen({super.key, required this.currentUser});
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -59,8 +56,10 @@ class _MainScreenState extends State<MainScreen> {
     _selectedIndex = 0;
   }
 
-  // ... (Fungsi _kurangiStok, _addStok, _updateStok, _restockStok, _addSewa, _deleteSewa, _addPesanan, _deletePesanan biarkan apa adanya) ...
-    void _kurangiStok(List<OrderItem> items) {
+  // ... (Fungsi _addStok, _updateStok, _restockStok biarkan apa adanya) ...
+
+  // --- PERBAIKAN: Fungsi _kurangiStok dihapus karena 'items' sudah tidak ada ---
+  /* void _kurangiStok(List<OrderItem> items) {
     setState(() {
       for (var orderItem in items) {
         final index =
@@ -71,14 +70,17 @@ class _MainScreenState extends State<MainScreen> {
       }
     });
   }
+  */
 
   void _addStok(String nama, int jumlah) {
     setState(() {
-      stokList.add(StokItem(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        nama: nama,
-        jumlah: jumlah,
-      ));
+      stokList.add(
+        StokItem(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          nama: nama,
+          jumlah: jumlah,
+        ),
+      );
     });
   }
 
@@ -104,7 +106,7 @@ class _MainScreenState extends State<MainScreen> {
   void _addSewa(Sewa data) {
     setState(() {
       sewaList.add(data);
-      _kurangiStok(data.items);
+      // --- PERBAIKAN: _kurangiStok(data.items) dihapus ---
     });
   }
 
@@ -117,7 +119,7 @@ class _MainScreenState extends State<MainScreen> {
   void _addPesanan(Pesanan data) {
     setState(() {
       pesananList.add(data);
-      _kurangiStok(data.items);
+      // --- PERBAIKAN: _kurangiStok(data.items) dihapus ---
     });
   }
 
@@ -133,11 +135,10 @@ class _MainScreenState extends State<MainScreen> {
     });
   }
 
-  // PERBAIKAN: Fungsi logout memanggil kedua service
   void _logout() async {
     await AuthService.instance.signOut();
-    await FirebaseAdminService.instance.signOutAdmin(); // Logout dari admin-app
-    
+    await FirebaseAdminService.instance.signOutAdmin();
+
     if (!mounted) return;
     Navigator.pushAndRemoveUntil(
       context,
@@ -160,7 +161,7 @@ class _MainScreenState extends State<MainScreen> {
         onLogout: _logout,
       ),
       PencatatanScreen(
-        stokList: stokList,
+        // --- PERBAIKAN: 'stokList: stokList' dihapus ---
         onConfirmSewa: _addSewa,
         onConfirmPesanan: _addPesanan,
         onNavigateAfterSubmit: (int pageIndex) => _onItemTapped(pageIndex),
@@ -176,28 +177,40 @@ class _MainScreenState extends State<MainScreen> {
     ];
 
     final List<BottomNavigationBarItem> navItems = [
-      const BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), label: "Dashboard"),
-      const BottomNavigationBarItem(icon: Icon(Icons.edit_note_rounded), label: "Pencatatan"),
-      const BottomNavigationBarItem(icon: Icon(Icons.inventory_2_rounded), label: "Stok"),
-      const BottomNavigationBarItem(icon: Icon(Icons.shopping_cart_rounded), label: "Sewa"),
-      const BottomNavigationBarItem(icon: Icon(Icons.list_alt_rounded), label: "Pesanan"),
+      const BottomNavigationBarItem(
+        icon: Icon(Icons.dashboard_rounded),
+        label: "Dashboard",
+      ),
+      const BottomNavigationBarItem(
+        icon: Icon(Icons.edit_note_rounded),
+        label: "Pencatatan",
+      ),
+      const BottomNavigationBarItem(
+        icon: Icon(Icons.inventory_2_rounded),
+        label: "Stok",
+      ),
+      const BottomNavigationBarItem(
+        icon: Icon(Icons.shopping_cart_rounded),
+        label: "Sewa",
+      ),
+      const BottomNavigationBarItem(
+        icon: Icon(Icons.list_alt_rounded),
+        label: "Pesanan",
+      ),
     ];
 
-    // Logika ini sudah benar, HANYA menambahkan tab jika admin
     if (widget.currentUser.role == Role.admin) {
-      pages.add(UserManagementScreen(
-        currentUser: widget.currentUser,
-      ));
-      navItems.add(const BottomNavigationBarItem(
-          icon: Icon(Icons.manage_accounts_rounded), label: "Users"));
+      pages.add(UserManagementScreen(currentUser: widget.currentUser));
+      navItems.add(
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.manage_accounts_rounded),
+          label: "Users",
+        ),
+      );
     }
 
     return Scaffold(
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: pages,
-      ),
-      // PERBAIKAN: Hapus kondisi ternary, tampilkan navbar untuk semua role
+      body: IndexedStack(index: _selectedIndex, children: pages),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -226,8 +239,10 @@ class _MainScreenState extends State<MainScreen> {
             unselectedItemColor: Colors.grey.shade400,
             backgroundColor: Colors.white,
             elevation: 0,
-            selectedLabelStyle:
-                const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+            selectedLabelStyle: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
             unselectedLabelStyle: const TextStyle(fontSize: 12),
             items: navItems,
           ),

@@ -1,19 +1,18 @@
+// pencatatan.dart
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/models.dart';
 import '../widgets/shared_widgets.dart';
 import '../theme/app_theme.dart';
-import 'pilih_stok.dart';
 
 class PencatatanScreen extends StatefulWidget {
-  final List<StokItem> stokList;
   final Function(Sewa) onConfirmSewa;
   final Function(Pesanan) onConfirmPesanan;
   final Function(int) onNavigateAfterSubmit;
 
   const PencatatanScreen({
     super.key,
-    required this.stokList,
     required this.onConfirmSewa,
     required this.onConfirmPesanan,
     required this.onNavigateAfterSubmit,
@@ -23,20 +22,29 @@ class PencatatanScreen extends StatefulWidget {
   State<PencatatanScreen> createState() => _PencatatanScreenState();
 }
 
-class _PencatatanScreenState extends State<PencatatanScreen> with SingleTickerProviderStateMixin {
+class _PencatatanScreenState extends State<PencatatanScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final _sewaFormKey = GlobalKey<FormState>();
   final _pesananFormKey = GlobalKey<FormState>();
 
+  // Controller
   final _namaController = TextEditingController();
   final _alamatController = TextEditingController();
-  DateTime? _selectedDate;
-  List<OrderItem> _selectedItems = [];
-
   final _durasiController = TextEditingController();
+  final _noHpController = TextEditingController();
+  final _keteranganController = TextEditingController();
+  final _hargaController = TextEditingController();
+
+  DateTime? _selectedDate;
   String? _selectedJaminan;
 
-  final List<String> _jaminanOptions = ["KTP", "SIM", "Kartu Pelajar", "Uang Tunai Rp300.000"];
+  final List<String> _jaminanOptions = [
+    "KTP",
+    "SIM",
+    "Kartu Pelajar",
+    "Uang Tunai Rp300.000",
+  ];
 
   @override
   void initState() {
@@ -50,6 +58,9 @@ class _PencatatanScreenState extends State<PencatatanScreen> with SingleTickerPr
     _namaController.dispose();
     _alamatController.dispose();
     _durasiController.dispose();
+    _noHpController.dispose();
+    _keteranganController.dispose();
+    _hargaController.dispose();
     super.dispose();
   }
 
@@ -69,42 +80,95 @@ class _PencatatanScreenState extends State<PencatatanScreen> with SingleTickerPr
     final isSewaTab = _tabController.index == 0;
     final formKey = isSewaTab ? _sewaFormKey : _pesananFormKey;
 
-    if (formKey.currentState!.validate() && _selectedDate != null && _selectedItems.isNotEmpty) {
-      if (isSewaTab) {
-        if (_selectedJaminan != null) {
-          final sewaData = Sewa(
-            nama: _namaController.text,
-            alamat: _alamatController.text,
-            tanggal: _selectedDate!,
-            items: _selectedItems,
-            durasi: int.tryParse(_durasiController.text) ?? 0,
-            jaminan: _selectedJaminan!,
-          );
-          widget.onConfirmSewa(sewaData);
-          _clearForm();
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Data sewa berhasil ditambahkan."), backgroundColor: AppColors.accentGreen,));
-          widget.onNavigateAfterSubmit(3);
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Harap pilih jaminan."), backgroundColor: AppColors.accentRed,));
-        }
-      } else {
-        final pesananData = Pesanan(
-          nama: _namaController.text,
-          alamat: _alamatController.text,
-          tanggal: _selectedDate!,
-          items: _selectedItems,
+    // --- Validasi ---
+    if (!formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Harap lengkapi semua data"),
+          backgroundColor: AppColors.accentRed,
+        ),
+      );
+      return;
+    }
+
+    // --- PERUBAHAN: Validasi field Keterangan ---
+    if (_keteranganController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Harap isi Keterangan Barang."),
+          backgroundColor: AppColors.accentRed,
+        ),
+      );
+      return;
+    }
+    // --- End Validasi ---
+
+    // Ambil data umum
+    final String noHp = _noHpController.text;
+    final double totalHarga = double.tryParse(_hargaController.text) ?? 0.0;
+    final String keterangan =
+        _keteranganController.text; // <-- Data diambil dari sini
+
+    if (isSewaTab) {
+      // --- Validasi Khusus Sewa ---
+      if (_selectedDate == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Harap pilih tanggal pengembalian."),
+            backgroundColor: AppColors.accentRed,
+          ),
         );
-        widget.onConfirmPesanan(pesananData);
-        _clearForm();
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Data pesanan berhasil ditambahkan."), backgroundColor: AppColors.accentGreen,));
-        widget.onNavigateAfterSubmit(4);
+        return;
       }
+      if (_selectedJaminan == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Harap pilih jaminan."),
+            backgroundColor: AppColors.accentRed,
+          ),
+        );
+        return;
+      }
+      // --- End Validasi Sewa ---
+
+      final sewaData = Sewa(
+        nama: _namaController.text,
+        alamat: _alamatController.text,
+        noHp: noHp,
+        tanggal: _selectedDate!,
+        totalHarga: totalHarga,
+        keterangan: keterangan, // <-- PERUBAHAN: Mengisi data keterangan
+        // 'namaBarang' sudah dihapus dari model
+        durasi: int.tryParse(_durasiController.text) ?? 0,
+        jaminan: _selectedJaminan!,
+      );
+      widget.onConfirmSewa(sewaData);
+      _clearForm();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Data sewa berhasil ditambahkan."),
+          backgroundColor: AppColors.accentGreen,
+        ),
+      );
+      widget.onNavigateAfterSubmit(3);
     } else {
-      String errorMessage = "Harap lengkapi semua data";
-      if (_selectedItems.isEmpty) {
-        errorMessage = "Harap pilih minimal satu barang.";
-      }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMessage), backgroundColor: AppColors.accentRed,));
+      // --- Tab Beli ---
+      final pesananData = Pesanan(
+        nama: _namaController.text,
+        alamat: _alamatController.text,
+        noHp: noHp,
+        totalHarga: totalHarga,
+        keterangan: keterangan,
+      );
+      widget.onConfirmPesanan(pesananData);
+      _clearForm();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Data beli berhasil ditambahkan."),
+          backgroundColor: AppColors.accentGreen,
+        ),
+      );
+      widget.onNavigateAfterSubmit(4);
     }
   }
 
@@ -112,10 +176,12 @@ class _PencatatanScreenState extends State<PencatatanScreen> with SingleTickerPr
     _namaController.clear();
     _alamatController.clear();
     _durasiController.clear();
+    _noHpController.clear();
+    _keteranganController.clear();
+    _hargaController.clear();
     setState(() {
       _selectedDate = null;
       _selectedJaminan = null;
-      _selectedItems = [];
     });
   }
 
@@ -131,20 +197,21 @@ class _PencatatanScreenState extends State<PencatatanScreen> with SingleTickerPr
           unselectedLabelColor: AppColors.textSecondary,
           tabs: const [
             Tab(text: "Sewa"),
-            Tab(text: "Pemesanan"),
+            Tab(text: "Beli"),
           ],
         ),
       ),
       body: TabBarView(
         controller: _tabController,
-        children: [
-          _buildSewaForm(),
-          _buildPesananForm(),
-        ],
+        children: [_buildSewaForm(), _buildPesananForm()],
       ),
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: buildGradientButton('Simpan Data', Icons.save_rounded, _submitForm),
+        child: buildGradientButton(
+          'Simpan Data',
+          Icons.save_rounded,
+          _submitForm,
+        ),
       ),
     );
   }
@@ -157,9 +224,24 @@ class _PencatatanScreenState extends State<PencatatanScreen> with SingleTickerPr
         children: [
           _buildCommonFields(),
           const SizedBox(height: 16),
-          buildTextField(_durasiController, 'Durasi Sewa (hari)', Icons.timer_rounded, keyboardType: TextInputType.number),
+          buildTextField(
+            _durasiController,
+            'Durasi Sewa (hari)',
+            Icons.timer_rounded,
+            keyboardType: TextInputType.number,
+          ),
           const SizedBox(height: 16),
           _buildJaminanDropdown(),
+          const SizedBox(height: 16),
+          _buildDatePicker("Tanggal Pengembalian Barang"),
+          const SizedBox(height: 16),
+          // --- PERUBAHAN: Label diubah ---
+          buildTextField(
+            _keteranganController,
+            'Keterangan Barang',
+            Icons.notes_rounded,
+            maxLines: 3,
+          ),
         ],
       ),
     );
@@ -172,52 +254,54 @@ class _PencatatanScreenState extends State<PencatatanScreen> with SingleTickerPr
         padding: const EdgeInsets.all(16),
         children: [
           _buildCommonFields(),
+          const SizedBox(height: 16),
+          // --- PERUBAHAN: Label diubah ---
+          buildTextField(
+            _keteranganController,
+            'Keterangan Barang',
+            Icons.notes_rounded,
+            maxLines: 3,
+          ),
         ],
       ),
     );
   }
 
+  // --- Field yang sama untuk kedua tab ---
   Widget _buildCommonFields() {
     return Column(
       children: [
-        buildTextField(_namaController, 'Nama Pelanggan', Icons.person_outline_rounded),
+        buildTextField(
+          _namaController,
+          'Nama Pelanggan',
+          Icons.person_outline_rounded,
+        ),
         const SizedBox(height: 16),
         buildTextField(_alamatController, 'Alamat', Icons.home_outlined),
         const SizedBox(height: 16),
-        _buildItemSelectionField(),
-        const SizedBox(height: 16),
-        _buildDatePicker(),
-      ],
-    );
-  }
-
-  Widget _buildItemSelectionField() {
-    return InkWell(
-      onTap: () async {
-        final result = await Navigator.push<List<OrderItem>>(context, MaterialPageRoute(builder: (context) => PilihStokScreen(stokList: widget.stokList, initialSelection: _selectedItems)));
-        if (result != null) {
-          setState(() {
-            _selectedItems = result;
-          });
-        }
-      },
-      child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: 'Barang Pesanan/Sewa',
-          prefixIcon: const Icon(Icons.card_giftcard_rounded),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          filled: true,
-          fillColor: Colors.white,
+        buildTextField(
+          _noHpController,
+          'No. HP',
+          Icons.phone_android_rounded,
+          keyboardType: TextInputType.phone,
         ),
-        child: _selectedItems.isEmpty ? const Text('Pilih barang...') : Text('${_selectedItems.length} barang dipilih'),
-      ),
+        const SizedBox(height: 16),
+        buildTextField(
+          _hargaController,
+          'Total Harga',
+          Icons.price_check_rounded,
+          keyboardType: TextInputType.number,
+        ),
+      ],
     );
   }
 
   Widget _buildJaminanDropdown() {
     return DropdownButtonFormField<String>(
       initialValue: _selectedJaminan,
-      items: _jaminanOptions.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+      items: _jaminanOptions
+          .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+          .toList(),
       onChanged: (v) => setState(() => _selectedJaminan = v),
       decoration: InputDecoration(
         labelText: 'Jaminan',
@@ -230,21 +314,25 @@ class _PencatatanScreenState extends State<PencatatanScreen> with SingleTickerPr
     );
   }
 
-  Widget _buildDatePicker() {
+  Widget _buildDatePicker(String label) {
     return InkWell(
       onTap: _pickDate,
       child: InputDecorator(
         decoration: InputDecoration(
-          labelText: 'Tanggal',
+          labelText: label,
           prefixIcon: const Icon(Icons.calendar_today_rounded),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           filled: true,
           fillColor: Colors.white,
         ),
         child: Text(
-          _selectedDate == null ? 'Pilih Tanggal' : DateFormat('d MMMM yyyy').format(_selectedDate!),
+          _selectedDate == null
+              ? 'Pilih Tanggal'
+              : DateFormat('d MMMM yyyy').format(_selectedDate!),
           style: TextStyle(
-            color: _selectedDate == null ? AppColors.textSecondary : AppColors.textPrimary,
+            color: _selectedDate == null
+                ? AppColors.textSecondary
+                : AppColors.textPrimary,
           ),
         ),
       ),
