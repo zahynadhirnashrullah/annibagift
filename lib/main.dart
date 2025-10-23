@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'theme/app_theme.dart';
-import 'pages/login_screen.dart';
+import 'pages/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,7 +20,7 @@ class AnnibaGiftApp extends StatelessWidget {
     return MaterialApp(
       title: 'Anniba Gift',
       theme: AppTheme.themeData,
-      home: const LoginScreen(), // <-- Atur LoginScreen sebagai halaman utama
+      home: const SplashScreen(), // Show splash screen on app launch
       debugShowCheckedModeBanner: false,
     );
   }
