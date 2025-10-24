@@ -34,6 +34,15 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    String _timeGreeting() {
+      final now = DateTime.now();
+      final hour = now.hour;
+      if (hour >= 4 && hour <= 10) return 'Selamat Pagi';
+      if (hour >= 11 && hour <= 14) return 'Selamat Siang';
+      if (hour >= 15 && hour <= 17) return 'Selamat Sore';
+      return 'Selamat Malam';
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Dashboard"),
@@ -83,8 +92,8 @@ class DashboardScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text("Selamat Datang, ${currentUser.username}!",
-              style: AppTextStyles.heading1),
+      Text("${_timeGreeting()}, ${currentUser.username}!",
+        style: AppTextStyles.heading1),
           const SizedBox(height: 8),
           const Text("Berikut ringkasan bisnis Anda hari ini.",
               style: AppTextStyles.body),
