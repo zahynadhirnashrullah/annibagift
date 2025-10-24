@@ -28,6 +28,8 @@ class _EditPesananScreenState extends State<EditPesananScreen> {
   final _keteranganController = TextEditingController();
   final _hargaController = TextEditingController();
 
+  PesananStatus? _selectedPesananStatus;
+
   @override
   void initState() {
     super.initState();
@@ -36,6 +38,7 @@ class _EditPesananScreenState extends State<EditPesananScreen> {
     _noHpController.text = widget.pesanan.noHp;
     _keteranganController.text = widget.pesanan.keterangan;
     _hargaController.text = widget.pesanan.totalHarga.toStringAsFixed(0);
+    _selectedPesananStatus = widget.pesanan.status;
   }
 
   @override
@@ -70,6 +73,7 @@ class _EditPesananScreenState extends State<EditPesananScreen> {
       totalHarga: double.tryParse(_hargaController.text) ?? 0.0,
       keterangan: _keteranganController.text,
       tanggalDibuat: widget.pesanan.tanggalDibuat,
+      status: _selectedPesananStatus ?? PesananStatus.proses,
     );
 
     widget.onConfirmEdit(widget.pesanan, updatedPesanan);
@@ -112,6 +116,8 @@ class _EditPesananScreenState extends State<EditPesananScreen> {
               Icons.notes_rounded,
               maxLines: 3,
             ),
+            const SizedBox(height: 16),
+            _buildPesananStatusDropdown(),
           ],
         ),
       ),
@@ -122,6 +128,30 @@ class _EditPesananScreenState extends State<EditPesananScreen> {
           Icons.save_rounded,
           _submitForm,
         ),
+      ),
+    );
+  }
+
+  Widget _buildPesananStatusDropdown() {
+    return DropdownButtonFormField<PesananStatus>(
+      initialValue: _selectedPesananStatus,
+      items: PesananStatus.values
+          .map((status) => DropdownMenuItem(
+                value: status,
+                child: Text(status == PesananStatus.proses
+                    ? 'Proses'
+                    : status == PesananStatus.selesai
+                        ? 'Selesai'
+                        : 'Dibatalkan'),
+              ))
+          .toList(),
+      onChanged: (v) => setState(() => _selectedPesananStatus = v),
+      decoration: InputDecoration(
+        labelText: 'Status',
+        prefixIcon: const Icon(Icons.sync_rounded),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        filled: true,
+        fillColor: Colors.white,
       ),
     );
   }

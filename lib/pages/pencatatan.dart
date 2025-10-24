@@ -39,6 +39,8 @@ class _PencatatanScreenState extends State<PencatatanScreen>
   DateTime? _selectedDate;
   DateTime? _selectedPickupDate;
   String? _selectedJaminan;
+  SewaStatus? _selectedSewaStatus;
+  PesananStatus? _selectedPesananStatus;
 
   final List<String> _jaminanOptions = [
     "KTP",
@@ -156,6 +158,7 @@ class _PencatatanScreenState extends State<PencatatanScreen>
         keterangan: keterangan,
         durasi: int.tryParse(_durasiController.text) ?? 0,
         jaminan: _selectedJaminan!,
+        status: _selectedSewaStatus ?? SewaStatus.proses,
       );
       widget.onConfirmSewa(sewaData);
       _clearForm();
@@ -182,6 +185,7 @@ class _PencatatanScreenState extends State<PencatatanScreen>
         noHp: noHp,
         totalHarga: totalHarga,
         keterangan: keterangan,
+        status: PesananStatus.proses, // Always starts as process
       );
       widget.onConfirmPesanan(pesananData);
       _clearForm();
@@ -206,6 +210,8 @@ class _PencatatanScreenState extends State<PencatatanScreen>
       _selectedDate = null;
       _selectedPickupDate = null;
       _selectedJaminan = null;
+      _selectedSewaStatus = null;
+      _selectedPesananStatus = null;
     });
   }
   // --- AKHIR LOGIKA (TIDAK BERUBAH) ---
@@ -328,6 +334,8 @@ class _PencatatanScreenState extends State<PencatatanScreen>
                   Icons.price_check_rounded,
                   keyboardType: TextInputType.number,
                 ),
+                const SizedBox(height: 16),
+                _buildSewaStatusDropdown(),
               ],
             ),
           ),
@@ -370,6 +378,21 @@ class _PencatatanScreenState extends State<PencatatanScreen>
                   'Total Harga',
                   Icons.price_check_rounded,
                   keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 16),
+                // Status field (disabled, always shows "Process")
+                InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: 'Status',
+                    prefixIcon: const Icon(Icons.sync_rounded),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    filled: true,
+                    fillColor: Colors.grey.shade100,
+                  ),
+                  child: const Text(
+                    'Proses',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
                 ),
               ],
             ),
@@ -471,6 +494,23 @@ class _PencatatanScreenState extends State<PencatatanScreen>
                 : AppColors.textPrimary,
           ),
         ),
+      ),
+    );
+  }
+
+  // Widget Sewa Status Dropdown
+  Widget _buildSewaStatusDropdown() {
+    return InputDecorator(
+      decoration: InputDecoration(
+        labelText: 'Status',
+        prefixIcon: const Icon(Icons.sync_rounded),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        filled: true,
+        fillColor: Colors.grey.shade100,
+      ),
+      child: const Text(
+        'Proses',
+        style: TextStyle(color: AppColors.textSecondary),
       ),
     );
   }

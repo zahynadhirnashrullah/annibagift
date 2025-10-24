@@ -229,6 +229,10 @@ class SewaListTile extends StatelessWidget {
               icon: Icons.security_outlined,
               text: "Jaminan: ${item.jaminan}",
             ),
+            InfoRow(
+              icon: Icons.sync_rounded,
+              text: "Status: ${item.status == SewaStatus.proses ? 'Proses' : item.status == SewaStatus.selesai ? 'Selesai' : 'Dibatalkan'}",
+            ),
           ],
         ),
       ),
@@ -304,6 +308,10 @@ class PesananListTile extends StatelessWidget {
               icon: Icons.receipt_long_outlined,
               text:
                   "Rp ${NumberFormat.decimalPattern('id_ID').format(item.totalHarga)}",
+            ),
+            InfoRow(
+              icon: Icons.sync_rounded,
+              text: "Status: ${item.status == PesananStatus.proses ? 'Proses' : item.status == PesananStatus.selesai ? 'Selesai' : 'Dibatalkan'}",
             ),
           ],
         ),

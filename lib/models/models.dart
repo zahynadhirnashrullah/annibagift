@@ -25,6 +25,12 @@ class StokItem {
 }
 
 // --- PERUBAHAN DI SINI ---
+enum SewaStatus {
+  proses,
+  selesai,
+  dibatalkan,
+}
+
 class Sewa {
   final String id; // TAMBAHAN
   final String nama;
@@ -36,6 +42,7 @@ class Sewa {
   final double totalHarga;
   final int durasi;
   final String jaminan;
+  final SewaStatus status; // TAMBAHAN
 
   Sewa({
     String? id, // TAMBAHAN
@@ -48,30 +55,41 @@ class Sewa {
     required this.keterangan,
     required this.durasi,
     required this.jaminan,
+    SewaStatus? status, // TAMBAHAN
   })  : id = id ?? uuid.v4(), // TAMBAHAN
-        tanggalDibuat = tanggalDibuat ?? DateTime.now(); // TAMBAHAN
+        tanggalDibuat = tanggalDibuat ?? DateTime.now(), // TAMBAHAN
+        status = status ?? SewaStatus.proses; // TAMBAHAN
 }
 
 // --- PERUBAHAN DI SINI ---
+enum PesananStatus {
+  proses,
+  selesai,
+  dibatalkan,
+}
+
 class Pesanan {
-  final String id; // TAMBAHAN
+  final String id;
   final String nama;
   final String alamat;
   final String noHp;
   final double totalHarga;
   final String keterangan;
-  final DateTime tanggalDibuat; // TAMBAHAN
+  final DateTime tanggalDibuat;
+  final PesananStatus status;
 
   Pesanan({
-    String? id, // TAMBAHAN
+    String? id,
     required this.nama,
     required this.alamat,
     required this.noHp,
     required this.totalHarga,
     required this.keterangan,
-    DateTime? tanggalDibuat, // TAMBAHAN
-  })  : id = id ?? uuid.v4(), // TAMBAHAN
-        tanggalDibuat = tanggalDibuat ?? DateTime.now(); // TAMBAHAN
+    DateTime? tanggalDibuat,
+    PesananStatus? status,
+  })  : id = id ?? uuid.v4(),
+        tanggalDibuat = tanggalDibuat ?? DateTime.now(),
+        status = status ?? PesananStatus.proses;
 }
 
 // --- FILE BARU DI SINI ---
