@@ -37,6 +37,7 @@ class _PencatatanScreenState extends State<PencatatanScreen>
   final _hargaController = TextEditingController();
 
   DateTime? _selectedDate;
+  DateTime? _selectedPickupDate;
   String? _selectedJaminan;
 
   final List<String> _jaminanOptions = [
@@ -73,6 +74,18 @@ class _PencatatanScreenState extends State<PencatatanScreen>
     );
     if (picked != null) {
       setState(() => _selectedDate = picked);
+    }
+  }
+
+  void _pickPickupDate() async {
+    DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2023),
+      lastDate: DateTime(2030),
+    );
+    if (picked != null) {
+      setState(() => _selectedPickupDate = picked);
     }
   }
 
@@ -124,6 +137,16 @@ class _PencatatanScreenState extends State<PencatatanScreen>
         return;
       }
 
+      if (_selectedPickupDate == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Harap pilih tanggal pengambilan."),
+            backgroundColor: AppColors.accentRed,
+          ),
+        );
+        return;
+      }
+
       final sewaData = Sewa(
         nama: _namaController.text,
         alamat: _alamatController.text,
@@ -144,6 +167,15 @@ class _PencatatanScreenState extends State<PencatatanScreen>
       );
       widget.onNavigateAfterSubmit(3);
     } else {
+      if (_selectedPickupDate == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Harap pilih tanggal pengambilan."),
+            backgroundColor: AppColors.accentRed,
+          ),
+        );
+        return;
+      }
       final pesananData = Pesanan(
         nama: _namaController.text,
         alamat: _alamatController.text,
@@ -172,6 +204,7 @@ class _PencatatanScreenState extends State<PencatatanScreen>
     _hargaController.clear();
     setState(() {
       _selectedDate = null;
+      _selectedPickupDate = null;
       _selectedJaminan = null;
     });
   }
@@ -209,7 +242,7 @@ class _PencatatanScreenState extends State<PencatatanScreen>
           color: AppColors.card, // Latar belakang putih
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withAlpha((255 * 0.1).round()),
               blurRadius: 10,
               offset: const Offset(0, -5), // Bayangan di atas
             )
@@ -234,7 +267,7 @@ class _PencatatanScreenState extends State<PencatatanScreen>
         borderRadius: BorderRadius.circular(16), // Sudut membulat
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05), // Bayangan halus
+            color: Colors.black.withAlpha((255 * 0.05).round()), // Bayangan halus
             blurRadius: 10,
             offset: const Offset(0, 4),
           )
@@ -274,22 +307,26 @@ class _PencatatanScreenState extends State<PencatatanScreen>
             title: 'Detail Sewa',
             child: Column(
               children: [
-                buildTextField(
-                  _durasiController,
-                  'Durasi Sewa (hari)',
-                  Icons.timer_rounded,
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 16),
-                _buildJaminanDropdown(),
+                // Tanggal Pengambilan
+                _buildPickupDatePicker("Tanggal Pengambilan"),
                 const SizedBox(height: 16),
                 _buildDatePicker("Tanggal Pengembalian Barang"),
+                const SizedBox(height: 16),
+                _buildJaminanDropdown(),
                 const SizedBox(height: 16),
                 buildTextField(
                   _keteranganController,
                   'Keterangan Barang',
                   Icons.notes_rounded,
                   maxLines: 3,
+                ),
+                const SizedBox(height: 16),
+                // Harga di bagian bawah detail sewa
+                buildTextField(
+                  _hargaController,
+                  'Total Harga',
+                  Icons.price_check_rounded,
+                  keyboardType: TextInputType.number,
                 ),
               ],
             ),
@@ -316,11 +353,25 @@ class _PencatatanScreenState extends State<PencatatanScreen>
           // Kartu 2: Detail Pesanan
           _buildFormSection(
             title: 'Detail Pesanan',
-            child: buildTextField(
-              _keteranganController,
-              'Keterangan Barang',
-              Icons.notes_rounded,
-              maxLines: 3,
+            child: Column(
+              children: [
+                _buildPickupDatePicker("Tanggal Pengambilan"),
+                const SizedBox(height: 16),
+                buildTextField(
+                  _keteranganController,
+                  'Keterangan Barang',
+                  Icons.notes_rounded,
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 16),
+                // Harga dipindahkan ke bawah detail pesanan
+                buildTextField(
+                  _hargaController,
+                  'Total Harga',
+                  Icons.price_check_rounded,
+                  keyboardType: TextInputType.number,
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 24), // Jarak di bawah
@@ -348,12 +399,6 @@ class _PencatatanScreenState extends State<PencatatanScreen>
           keyboardType: TextInputType.phone,
         ),
         const SizedBox(height: 16),
-        buildTextField(
-          _hargaController,
-          'Total Harga',
-          Icons.price_check_rounded,
-          keyboardType: TextInputType.number,
-        ),
       ],
     );
   }
@@ -361,8 +406,8 @@ class _PencatatanScreenState extends State<PencatatanScreen>
   // Widget Jaminan (tidak perlu diubah)
   Widget _buildJaminanDropdown() {
     return DropdownButtonFormField<String>(
-      // --- PERBAIKAN LINTER: Gunakan 'value' ---
-      value: _selectedJaminan,
+      // --- PERBAIKAN LINTER: gunakan initialValue (value is deprecated) ---
+      initialValue: _selectedJaminan,
       items: _jaminanOptions
           .map((e) => DropdownMenuItem(value: e, child: Text(e)))
           .toList(),
@@ -396,6 +441,32 @@ class _PencatatanScreenState extends State<PencatatanScreen>
               : DateFormat('d MMMM yyyy').format(_selectedDate!),
           style: TextStyle(
             color: _selectedDate == null
+                ? AppColors.textSecondary
+                : AppColors.textPrimary,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Widget Date Picker untuk tanggal pengambilan
+  Widget _buildPickupDatePicker(String label) {
+    return InkWell(
+      onTap: _pickPickupDate,
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: const Icon(Icons.calendar_today_rounded),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          filled: true,
+          fillColor: Colors.white,
+        ),
+        child: Text(
+          _selectedPickupDate == null
+              ? 'Pilih Tanggal'
+              : DateFormat('d MMMM yyyy').format(_selectedPickupDate!),
+          style: TextStyle(
+            color: _selectedPickupDate == null
                 ? AppColors.textSecondary
                 : AppColors.textPrimary,
           ),

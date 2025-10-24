@@ -1,6 +1,7 @@
 // lib/widgets/shared_widgets.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
 import '../models/models.dart';
@@ -47,12 +48,36 @@ Widget buildTextField(
   bool readOnly = false,
   int maxLines = 1,
 }) {
+  // For price formatting
+  List<TextInputFormatter>? formatters;
+  if (label == 'Total Harga') {
+    formatters = [
+      FilteringTextInputFormatter.digitsOnly,
+      TextInputFormatter.withFunction((oldValue, newValue) {
+        if (newValue.text.isEmpty) {
+          return newValue;
+        }
+        final int? value = int.tryParse(newValue.text.replaceAll(',', ''));
+        if (value != null) {
+          final formatter = NumberFormat('#,###', 'id_ID');
+          final String formatted = formatter.format(value);
+          return TextEditingValue(
+            text: formatted,
+            selection: TextSelection.collapsed(offset: formatted.length),
+          );
+        }
+        return oldValue;
+      }),
+    ];
+  }
+
   return TextFormField(
     controller: controller,
     obscureText: isObscure,
     keyboardType: keyboardType,
     readOnly: readOnly,
     maxLines: maxLines,
+    inputFormatters: formatters,
     decoration: InputDecoration(
       labelText: label,
       prefixIcon: Icon(icon),
