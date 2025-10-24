@@ -5,9 +5,6 @@ import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
 import '../models/models.dart';
 
-// (Fungsi buildGradientButton, buildTextField, EmptyStateWidget, InfoRow tidak berubah)
-// ... Salin kode Anda sebelumnya untuk fungsi-fungsi ini ...
-
 Widget buildGradientButton(String text, IconData icon, VoidCallback onPressed) {
   return Container(
     width: double.infinity,
@@ -133,8 +130,14 @@ class InfoRow extends StatelessWidget {
 class SewaListTile extends StatelessWidget {
   final Sewa item;
   final VoidCallback onDelete;
+  final VoidCallback onEdit; // <-- TAMBAHAN
 
-  const SewaListTile({super.key, required this.item, required this.onDelete});
+  const SewaListTile({
+    super.key,
+    required this.item,
+    required this.onDelete,
+    required this.onEdit, // <-- TAMBAHAN
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -151,19 +154,31 @@ class SewaListTile extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(item.nama, style: AppTextStyles.subtitle),
+                // <-- Dibungkus Expanded agar nama tidak overflow
+                Expanded(
+                  child: Text(item.nama, style: AppTextStyles.subtitle),
+                ),
+                // --- PERUBAHAN DI SINI ---
+                IconButton(
+                  icon: const Icon(
+                    Icons.edit_outlined,
+                    color: AppColors.accentBlue, // Ganti warna
+                  ),
+                  onPressed: onEdit, // Panggil onEdit
+                ),
                 IconButton(
                   icon: const Icon(
                     Icons.delete_outline_rounded,
                     color: AppColors.accentRed,
                   ),
-                  onPressed: onDelete,
+                  onPressed: onDelete, // Panggil onDelete
                 ),
+                // --- AKHIR PERUBAHAN ---
               ],
             ),
             const SizedBox(height: 8),
 
-            // --- PERUBAHAN: Menampilkan Keterangan ---
+            // --- Menampilkan Keterangan ---
             Text(
               item.keterangan,
               style: AppTextStyles.body.copyWith(
@@ -199,11 +214,13 @@ class SewaListTile extends StatelessWidget {
 class PesananListTile extends StatelessWidget {
   final Pesanan item;
   final VoidCallback onDelete;
+  final VoidCallback onEdit; // <-- TAMBAHAN
 
   const PesananListTile({
     super.key,
     required this.item,
     required this.onDelete,
+    required this.onEdit, // <-- TAMBAHAN
   });
 
   @override
@@ -221,19 +238,31 @@ class PesananListTile extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(item.nama, style: AppTextStyles.subtitle),
+                // <-- Dibungkus Expanded agar nama tidak overflow
+                Expanded(
+                  child: Text(item.nama, style: AppTextStyles.subtitle),
+                ),
+                // --- PERUBAHAN DI SINI ---
+                IconButton(
+                  icon: const Icon(
+                    Icons.edit_outlined,
+                    color: AppColors.accentBlue,
+                  ),
+                  onPressed: onEdit, // Panggil onEdit
+                ),
                 IconButton(
                   icon: const Icon(
                     Icons.delete_outline_rounded,
                     color: AppColors.accentRed,
                   ),
-                  onPressed: onDelete,
+                  onPressed: onDelete, // Panggil onDelete
                 ),
+                // --- AKHIR PERUBAHAN ---
               ],
             ),
             const SizedBox(height: 8),
 
-            // --- PERUBAHAN: Menampilkan Keterangan ---
+            // --- Menampilkan Keterangan ---
             Text(
               item.keterangan,
               style: AppTextStyles.body.copyWith(
@@ -259,7 +288,6 @@ class PesananListTile extends StatelessWidget {
 }
 
 // (StokListTile dan StatCard tidak berubah)
-// ... Salin kode Anda sebelumnya untuk Widget di bawah ini ...
 
 class StokListTile extends StatelessWidget {
   final StokItem item;
