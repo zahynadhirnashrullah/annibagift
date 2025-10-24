@@ -112,17 +112,17 @@ class _LoginScreenState extends State<LoginScreen> {
       decoration: InputDecoration(
         labelText: label,
         // Label dan ikon akan berwarna putih transparan
-        labelStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
-        prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.7), size: 20),
+  labelStyle: TextStyle(color: Colors.white.withAlpha((255 * 0.7).round())),
+  prefixIcon: Icon(icon, color: Colors.white.withAlpha((255 * 0.7).round()), size: 20),
 
         // Latar belakang field yang transparan
-        filled: true,
-        fillColor: Colors.white.withOpacity(0.1),
+  filled: true,
+  fillColor: Colors.white.withAlpha((255 * 0.1).round()),
 
         // Border yang juga transparan
-        enabledBorder: OutlineInputBorder(
+          enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
+          borderSide: BorderSide(color: Colors.white.withAlpha((255 * 0.2).round())),
         ),
         // Border saat diklik (menjadi putih solid)
         focusedBorder: OutlineInputBorder(
@@ -195,8 +195,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     Text(
                       'Masuk untuk mengelola bisnis Anda',
                       textAlign: TextAlign.center,
-                      style: AppTextStyles.body.copyWith(
-                        color: Colors.white.withOpacity(0.7),
+                        style: AppTextStyles.body.copyWith(
+                        color: Colors.white.withAlpha((255 * 0.7).round()),
                         fontSize: 16,
                       ),
                     ),
@@ -213,11 +213,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           padding: const EdgeInsets.all(24.0),
                           decoration: BoxDecoration(
                             // Warna kaca semi-transparan
-                            color: Colors.white.withOpacity(0.15),
+                              color: Colors.white.withAlpha((255 * 0.15).round()),
                             borderRadius: BorderRadius.circular(16),
                             // Border tipis untuk memberi kesan "tepi" kaca
                             border: Border.all(
-                              color: Colors.white.withOpacity(0.2),
+                                color: Colors.white.withAlpha((255 * 0.2).round()),
                             ),
                           ),
                           child: Form(
@@ -260,8 +260,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 const SizedBox(height: 32),
                                 _isLoading
                                     ? const CircularProgressIndicator(
-                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                      )
+                                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                              )
                                     // Menggunakan tombol gradient Anda yang sudah ada
                                     : buildGradientButton(
                                         'Login',

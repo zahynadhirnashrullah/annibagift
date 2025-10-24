@@ -187,8 +187,8 @@ class _EditSewaScreenState extends State<EditSewaScreen> {
 
   Widget _buildJaminanDropdown() {
     return DropdownButtonFormField<String>(
-      // --- PERBAIKAN LINTER: Menggunakan 'value' ---
-      value: _selectedJaminan,
+      // --- PERBAIKAN LINTER: use 'initialValue' instead of deprecated 'value' ---
+      initialValue: _selectedJaminan,
       // --- AKHIR PERBAIKAN ---
       items: _jaminanOptions
           .map((e) => DropdownMenuItem(value: e, child: Text(e)))

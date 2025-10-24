@@ -34,10 +34,10 @@ class SewaScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16), // Sudut membulat
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05), // Bayangan halus
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      )
+                          color: Colors.black.withAlpha((255 * 0.05).round()), // Bayangan halus
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        )
                     ],
                   ),
                   child: Column(

@@ -87,37 +87,6 @@ class _MainScreenState extends State<MainScreen> {
         _transaksiList.fold(0.0, (sum, item) => sum + item.jumlah);
   }
 
-  void _addStok(String nama, int jumlah) {
-    setState(() {
-      stokList.add(
-        StokItem(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          nama: nama,
-          jumlah: jumlah,
-        ),
-      );
-    });
-  }
-
-  void _updateStok(String id, String newName, int newJumlah) {
-    setState(() {
-      final index = stokList.indexWhere((item) => item.id == id);
-      if (index != -1) {
-        stokList[index].nama = newName;
-        stokList[index].jumlah = newJumlah;
-      }
-    });
-  }
-
-  void _restockStok(String id, int additionalJumlah) {
-    setState(() {
-      final index = stokList.indexWhere((item) => item.id == id);
-      if (index != -1) {
-        stokList[index].jumlah += additionalJumlah;
-      }
-    });
-  }
-
   void _addSewa(Sewa data) {
     setState(() {
       sewaList.add(data);
@@ -312,12 +281,6 @@ class _MainScreenState extends State<MainScreen> {
         onConfirmPesanan: _addPesanan,
         onNavigateAfterSubmit: (int pageIndex) => _onItemTapped(pageIndex),
       ),
-      StokScreen(
-        stokList: stokList,
-        onAdd: _addStok,
-        onUpdate: _updateStok,
-        onRestock: _restockStok,
-      ),
       SewaScreen(
         sewaList: sewaList,
         onDelete: _deleteSewa,
@@ -376,7 +339,7 @@ class _MainScreenState extends State<MainScreen> {
               // 3. Memberi bayangan yang lebih halus
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.08), // Bayangan lebih tipis
+                  color: Colors.black.withAlpha((255 * 0.08).round()), // Bayangan lebih tipis
                   spreadRadius: 2,
                   blurRadius: 10,
                   offset: const Offset(0, 4),

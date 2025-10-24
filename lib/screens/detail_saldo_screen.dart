@@ -187,8 +187,8 @@ class _DetailSaldoScreenState extends State<DetailSaldoScreen> {
       builder: (BuildContext dialogContext) {
         return AlertDialog(
           title: const Text('Konfirmasi Hapus'),
-          content:
-              Text('Anda yakin ingin menghapus "${pengeluaran.deskripsi}"?'),
+      content:
+                    Text('Anda yakin ingin menghapus "${pengeluaran.deskripsi}"?'),
           actions: <Widget>[
             TextButton(
               child: const Text('Batal'),
@@ -226,7 +226,7 @@ class _DetailSaldoScreenState extends State<DetailSaldoScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      "Total (${_filterType})",
+                      "Total ($_filterType)",
                       style: AppTextStyles.heading2,
                     ),
                     DropdownButton<String>(
