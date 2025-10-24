@@ -1,5 +1,8 @@
+// lib/pages/dashboard.dart
+
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/shared_widgets.dart';
@@ -7,8 +10,12 @@ import '../widgets/shared_widgets.dart';
 class DashboardScreen extends StatelessWidget {
   final int sewaCount;
   final int pesananCount;
+  final int stokCount;
+  final double totalSaldo;
   final VoidCallback onNavigateToSewa;
   final VoidCallback onNavigateToPesanan;
+  final VoidCallback onNavigateToStok;
+  final VoidCallback onNavigateToDetailSaldo;
   final User currentUser;
   final VoidCallback onLogout;
 
@@ -16,8 +23,12 @@ class DashboardScreen extends StatelessWidget {
     super.key,
     required this.sewaCount,
     required this.pesananCount,
+    required this.stokCount,
+    required this.totalSaldo,
     required this.onNavigateToSewa,
     required this.onNavigateToPesanan,
+    required this.onNavigateToStok,
+    required this.onNavigateToDetailSaldo,
     required this.currentUser,
     required this.onLogout,
   });
@@ -32,9 +43,7 @@ class DashboardScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.logout_rounded, color: AppColors.accentRed),
             tooltip: 'Logout',
-            // <-- MODIFIKASI DIMULAI DI SINI
             onPressed: () {
-              // Menampilkan dialog konfirmasi
               showDialog(
                 context: context,
                 builder: (BuildContext dialogContext) {
@@ -45,27 +54,22 @@ class DashboardScreen extends StatelessWidget {
                     title: const Text('Konfirmasi Logout'),
                     content: const Text('Apakah Anda yakin ingin logout?'),
                     actions: <Widget>[
-                      // Tombol "Tidak"
                       TextButton(
                         child: const Text(
                           'Tidak',
-                          style: TextStyle(color: AppColors.primary), // Sesuaikan dengan theme Anda
+                          style: TextStyle(color: AppColors.primary),
                         ),
                         onPressed: () {
-                          // Tutup dialog
                           Navigator.of(dialogContext).pop();
                         },
                       ),
-                      // Tombol "Ya"
                       TextButton(
                         child: const Text(
                           'Ya, Logout',
-                          style: TextStyle(color: AppColors.accentRed), // Memberi warna merah untuk aksi
+                          style: TextStyle(color: AppColors.accentRed),
                         ),
                         onPressed: () {
-                          // 1. Tutup dialog
                           Navigator.of(dialogContext).pop();
-                          // 2. Jalankan fungsi logout asli
                           onLogout();
                         },
                       ),
@@ -74,7 +78,6 @@ class DashboardScreen extends StatelessWidget {
                 },
               );
             },
-            // <-- MODIFIKASI SELESAI DI SINI
           ),
         ],
       ),
@@ -87,68 +90,63 @@ class DashboardScreen extends StatelessWidget {
           const Text("Berikut ringkasan bisnis Anda hari ini.",
               style: AppTextStyles.body),
           const SizedBox(height: 24),
-
-          // --- KODE UI LAMA ANDA ---
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.primary, AppColors.secondary],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withAlpha((0.3 * 255).round()),
-                    blurRadius: 15,
-                    offset: const Offset(0, 5),
-                  )
-                ]),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text("Total Saldo",
-                    style: TextStyle(color: Colors.white70, fontSize: 16)),
-                const SizedBox(height: 8),
-                const Text("Rp 12.500.000",
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold)),
-                const SizedBox(height: 20),
-                SizedBox(
-                  height: 80,
-                  child: LineChart(
-                    LineChartData(
-                      gridData: FlGridData(show: false),
-                      titlesData: FlTitlesData(show: false),
-                      borderData: FlBorderData(show: false),
-                      lineBarsData: [
-                        LineChartBarData(
-                          spots: const [
-                            FlSpot(0, 2), FlSpot(1, 2.5), FlSpot(2, 1.8),
-                            FlSpot(3, 3.5), FlSpot(4, 2.8), FlSpot(5, 4),
-                          ],
-                          isCurved: true,
-                          color: Colors.white,
-                          barWidth: 3,
-                          isStrokeCapRound: true,
-                          dotData: FlDotData(show: false),
-                          belowBarData: BarAreaData(
-                            show: true,
-                            color: Colors.white.withAlpha((0.2 * 255).round()),
-                          ),
-                        ),
-                      ],
-                    ),
+          InkWell(
+            onTap: onNavigateToDetailSaldo,
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppColors.primary, AppColors.secondary],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                ),
-              ],
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withAlpha((255 * 0.3).round()),
+                      blurRadius: 15,
+                      offset: const Offset(0, 5),
+                    )
+                  ]),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "Total Saldo",
+                        style: TextStyle(color: Colors.white70, fontSize: 16),
+                      ),
+                      Icon(
+                        Icons.account_balance_wallet_rounded,
+                        color: Colors.white70,
+                        size: 20,
+                      )
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Rp ${NumberFormat.decimalPattern('id_ID').format(totalSaldo)}",
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Ketuk untuk melihat detail  >',
+                    style: TextStyle(
+                      color: Colors.white.withAlpha((255 * 0.7).round()),
+                      fontSize: 12,
+                    ),
+                  )
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 24),
-
           Row(
             children: [
               Expanded(
@@ -171,11 +169,38 @@ class DashboardScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 24),
+          const SizedBox(height: 24),
           const Text('Aktivitas Terbaru', style: AppTextStyles.heading2),
           const SizedBox(height: 16),
-          const Center(
-            child:
-                Text('Belum ada aktivitas terbaru.', style: AppTextStyles.body),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.shade200, width: 1.5),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.history_toggle_off_rounded,
+                  size: 40,
+                  color: Colors.grey.shade400,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Belum ada aktivitas terbaru.',
+                  style: AppTextStyles.body,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Data sewa atau pesanan baru akan muncul di sini.',
+                  style:
+                      AppTextStyles.body.copyWith(fontSize: 12, color: Colors.grey),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
           ),
         ],
       ),

@@ -28,7 +28,7 @@ class _PencatatanScreenState extends State<PencatatanScreen>
   final _sewaFormKey = GlobalKey<FormState>();
   final _pesananFormKey = GlobalKey<FormState>();
 
-  // Controller
+  // --- LOGIKA (TIDAK BERUBAH) ---
   final _namaController = TextEditingController();
   final _alamatController = TextEditingController();
   final _durasiController = TextEditingController();
@@ -80,7 +80,6 @@ class _PencatatanScreenState extends State<PencatatanScreen>
     final isSewaTab = _tabController.index == 0;
     final formKey = isSewaTab ? _sewaFormKey : _pesananFormKey;
 
-    // --- Validasi ---
     if (!formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -91,7 +90,6 @@ class _PencatatanScreenState extends State<PencatatanScreen>
       return;
     }
 
-    // --- PERUBAHAN: Validasi field Keterangan ---
     if (_keteranganController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -101,16 +99,12 @@ class _PencatatanScreenState extends State<PencatatanScreen>
       );
       return;
     }
-    // --- End Validasi ---
 
-    // Ambil data umum
     final String noHp = _noHpController.text;
     final double totalHarga = double.tryParse(_hargaController.text) ?? 0.0;
-    final String keterangan =
-        _keteranganController.text; // <-- Data diambil dari sini
+    final String keterangan = _keteranganController.text;
 
     if (isSewaTab) {
-      // --- Validasi Khusus Sewa ---
       if (_selectedDate == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -129,7 +123,6 @@ class _PencatatanScreenState extends State<PencatatanScreen>
         );
         return;
       }
-      // --- End Validasi Sewa ---
 
       final sewaData = Sewa(
         nama: _namaController.text,
@@ -137,8 +130,7 @@ class _PencatatanScreenState extends State<PencatatanScreen>
         noHp: noHp,
         tanggal: _selectedDate!,
         totalHarga: totalHarga,
-        keterangan: keterangan, // <-- PERUBAHAN: Mengisi data keterangan
-        // 'namaBarang' sudah dihapus dari model
+        keterangan: keterangan,
         durasi: int.tryParse(_durasiController.text) ?? 0,
         jaminan: _selectedJaminan!,
       );
@@ -152,7 +144,6 @@ class _PencatatanScreenState extends State<PencatatanScreen>
       );
       widget.onNavigateAfterSubmit(3);
     } else {
-      // --- Tab Beli ---
       final pesananData = Pesanan(
         nama: _namaController.text,
         alamat: _alamatController.text,
@@ -184,12 +175,15 @@ class _PencatatanScreenState extends State<PencatatanScreen>
       _selectedJaminan = null;
     });
   }
+  // --- AKHIR LOGIKA (TIDAK BERUBAH) ---
 
+  // --- MODIFIKASI TAMPILAN DIMULAI DI SINI ---
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Pencatatan Baru"),
+        // TabBar tetap di AppBar, ini sudah modern
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: AppColors.primary,
@@ -205,8 +199,22 @@ class _PencatatanScreenState extends State<PencatatanScreen>
         controller: _tabController,
         children: [_buildSewaForm(), _buildPesananForm()],
       ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(16.0),
+      // --- PERUBAHAN PADA BOTTOM NAVIGATION BAR ---
+      bottomNavigationBar: Container(
+        // Memberi padding, termasuk untuk area aman di bawah (notch iPhone)
+        padding: EdgeInsets.fromLTRB(
+            16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
+        // Dekorasi untuk "mengangkat" tombol
+        decoration: BoxDecoration(
+          color: AppColors.card, // Latar belakang putih
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, -5), // Bayangan di atas
+            )
+          ],
+        ),
         child: buildGradientButton(
           'Simpan Data',
           Icons.save_rounded,
@@ -216,32 +224,77 @@ class _PencatatanScreenState extends State<PencatatanScreen>
     );
   }
 
+  // Widget helper baru untuk membuat 'kartu' form
+  Widget _buildFormSection({required String title, required Widget child}) {
+    return Container(
+      // Dekorasi kartu
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: Colors.white, // Latar belakang kartu
+        borderRadius: BorderRadius.circular(16), // Sudut membulat
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05), // Bayangan halus
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Judul untuk setiap grup
+          Text(
+            title,
+            style: AppTextStyles.subtitle.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const Divider(height: 24), // Garis pemisah
+          child, // Konten form (field-field)
+        ],
+      ),
+    );
+  }
+
+  // --- MERAPIKAN FORM DENGAN KARTU ---
   Widget _buildSewaForm() {
     return Form(
       key: _sewaFormKey,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _buildCommonFields(),
-          const SizedBox(height: 16),
-          buildTextField(
-            _durasiController,
-            'Durasi Sewa (hari)',
-            Icons.timer_rounded,
-            keyboardType: TextInputType.number,
+          // Kartu 1: Data Pelanggan
+          _buildFormSection(
+            title: 'Data Pelanggan',
+            child: _buildCommonFields(),
           ),
-          const SizedBox(height: 16),
-          _buildJaminanDropdown(),
-          const SizedBox(height: 16),
-          _buildDatePicker("Tanggal Pengembalian Barang"),
-          const SizedBox(height: 16),
-          // --- PERUBAHAN: Label diubah ---
-          buildTextField(
-            _keteranganController,
-            'Keterangan Barang',
-            Icons.notes_rounded,
-            maxLines: 3,
+          const SizedBox(height: 24), // Jarak antar kartu
+
+          // Kartu 2: Detail Sewa
+          _buildFormSection(
+            title: 'Detail Sewa',
+            child: Column(
+              children: [
+                buildTextField(
+                  _durasiController,
+                  'Durasi Sewa (hari)',
+                  Icons.timer_rounded,
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 16),
+                _buildJaminanDropdown(),
+                const SizedBox(height: 16),
+                _buildDatePicker("Tanggal Pengembalian Barang"),
+                const SizedBox(height: 16),
+                buildTextField(
+                  _keteranganController,
+                  'Keterangan Barang',
+                  Icons.notes_rounded,
+                  maxLines: 3,
+                ),
+              ],
+            ),
           ),
+          const SizedBox(height: 24), // Jarak di bawah
         ],
       ),
     );
@@ -253,21 +306,30 @@ class _PencatatanScreenState extends State<PencatatanScreen>
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _buildCommonFields(),
-          const SizedBox(height: 16),
-          // --- PERUBAHAN: Label diubah ---
-          buildTextField(
-            _keteranganController,
-            'Keterangan Barang',
-            Icons.notes_rounded,
-            maxLines: 3,
+          // Kartu 1: Data Pelanggan
+          _buildFormSection(
+            title: 'Data Pelanggan',
+            child: _buildCommonFields(),
           ),
+          const SizedBox(height: 24), // Jarak antar kartu
+
+          // Kartu 2: Detail Pesanan
+          _buildFormSection(
+            title: 'Detail Pesanan',
+            child: buildTextField(
+              _keteranganController,
+              'Keterangan Barang',
+              Icons.notes_rounded,
+              maxLines: 3,
+            ),
+          ),
+          const SizedBox(height: 24), // Jarak di bawah
         ],
       ),
     );
   }
 
-  // --- Field yang sama untuk kedua tab ---
+  // Field yang sama (tidak perlu diubah)
   Widget _buildCommonFields() {
     return Column(
       children: [
@@ -296,9 +358,11 @@ class _PencatatanScreenState extends State<PencatatanScreen>
     );
   }
 
+  // Widget Jaminan (tidak perlu diubah)
   Widget _buildJaminanDropdown() {
     return DropdownButtonFormField<String>(
-      initialValue: _selectedJaminan,
+      // --- PERBAIKAN LINTER: Gunakan 'value' ---
+      value: _selectedJaminan,
       items: _jaminanOptions
           .map((e) => DropdownMenuItem(value: e, child: Text(e)))
           .toList(),
@@ -314,6 +378,7 @@ class _PencatatanScreenState extends State<PencatatanScreen>
     );
   }
 
+  // Widget Date Picker (tidak perlu diubah)
   Widget _buildDatePicker(String label) {
     return InkWell(
       onTap: _pickDate,

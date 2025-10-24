@@ -33,6 +33,7 @@ dependencies:
   intl: ^0.18.1
   cupertino_icons: ^1.0.8
   fl_chart: ^1.1.1
+  uuid: ^4.4.0
 
   # 🔥 Versi Firebase yang kompatibel & stabil saat ini
   firebase_core: ^3.15.2
