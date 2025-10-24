@@ -13,7 +13,9 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
     // Navigasi ke layar login setelah 3 detik
-    Future.delayed(const Duration(seconds: 3), () {
+    Future.delayed(const Duration(seconds: 3), () async {
+      // Guard against using context if the widget was disposed while waiting
+      if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const LoginScreen()),
       );
@@ -33,7 +35,8 @@ class _SplashScreenState extends State<SplashScreen> {
               width: 300,
               height: 300,
               errorBuilder: (context, error, stackTrace) {
-                print('Error loading image: $error');
+                // Use debugPrint instead of print for better control in production
+                debugPrint('Error loading image: $error');
                 return const Icon(
                   Icons.error_outline,
                   size: 100,

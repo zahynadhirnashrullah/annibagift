@@ -261,77 +261,7 @@ class PesananListTile extends StatelessWidget {
 // (StokListTile dan StatCard tidak berubah)
 // ... Salin kode Anda sebelumnya untuk Widget di bawah ini ...
 
-class StokListTile extends StatelessWidget {
-  final StokItem item;
-  final VoidCallback onEdit;
-  final VoidCallback onRestock;
-
-  const StokListTile({
-    super.key,
-    required this.item,
-    required this.onEdit,
-    required this.onRestock,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.only(bottom: 16),
-      shadowColor: Colors.grey.withAlpha((0.1 * 255).round()),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-        child: Row(
-          children: [
-            CircleAvatar(
-              backgroundColor: AppColors.primary.withAlpha((0.1 * 255).round()),
-              child: const Icon(
-                Icons.inventory_2_rounded,
-                color: AppColors.primary,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(item.nama, style: AppTextStyles.subtitle),
-                  Text("Sisa: ${item.jumlah} unit", style: AppTextStyles.body),
-                ],
-              ),
-            ),
-            PopupMenuButton<String>(
-              onSelected: (value) {
-                if (value == 'edit') {
-                  onEdit();
-                } else if (value == 'restock') {
-                  onRestock();
-                }
-              },
-              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                const PopupMenuItem<String>(
-                  value: 'edit',
-                  child: ListTile(
-                    leading: Icon(Icons.edit_outlined),
-                    title: Text('Edit'),
-                  ),
-                ),
-                const PopupMenuItem<String>(
-                  value: 'restock',
-                  child: ListTile(
-                    leading: Icon(Icons.add_shopping_cart_rounded),
-                    title: Text('Restock'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+// StokListTile has been removed
 
 class StatCard extends StatelessWidget {
   final IconData icon;

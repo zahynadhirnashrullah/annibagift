@@ -1,24 +1,6 @@
 // lib/models/models.dart
 
-class OrderItem {
-  final String stokItemId;
-  final String namaBarang;
-  int jumlah;
-
-  OrderItem({
-    required this.stokItemId,
-    required this.namaBarang,
-    required this.jumlah,
-  });
-}
-
-class StokItem {
-  String id;
-  String nama;
-  int jumlah;
-
-  StokItem({required this.id, required this.nama, required this.jumlah});
-}
+// Stock-related models have been removed
 
 class Sewa {
   final String nama;

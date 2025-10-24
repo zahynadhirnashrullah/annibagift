@@ -5,7 +5,6 @@ import '../models/models.dart';
 import '../theme/app_theme.dart';
 import 'dashboard.dart';
 import 'pencatatan.dart';
-import 'stok.dart';
 import 'sewa.dart';
 import 'pemesanan.dart';
 import 'user_management_screen.dart';
@@ -26,29 +25,9 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
-  // Data state (biarkan apa adanya)
+  // Data state
   final List<Sewa> sewaList = [];
   final List<Pesanan> pesananList = [];
-  final List<StokItem> stokList = [
-    StokItem(id: '1', nama: 'Kotak Kado Besar', jumlah: 15),
-    StokItem(id: '2', nama: 'Pita Satin Merah (rol)', jumlah: 30),
-    StokItem(id: '3', nama: 'Snack Bouquet', jumlah: 12),
-    StokItem(id: '4', nama: 'Papan Bunga', jumlah: 8),
-    StokItem(id: '5', nama: 'Wrapping Paper Emas', jumlah: 20),
-    StokItem(id: '6', nama: 'Kartu Ucapan', jumlah: 50),
-    StokItem(id: '7', nama: 'Bunga Segar (ikat)', jumlah: 9),
-    StokItem(id: '8', nama: 'Kotak Kado Kecil', jumlah: 25),
-    StokItem(id: '9', nama: 'Pita Satin Biru (rol)', jumlah: 18),
-    StokItem(id: '10', nama: 'Snack Box', jumlah: 14),
-    StokItem(id: '11', nama: 'Balon Helium (pak)', jumlah: 22),
-    StokItem(id: '12', nama: 'Kertas Kado Polkadot', jumlah: 17),
-    StokItem(id: '13', nama: 'Bunga Plastik (ikat)', jumlah: 11),
-    StokItem(id: '14', nama: 'Kartu Ucapan Spesial', jumlah: 35),
-    StokItem(id: '15', nama: 'Papan Bunga Mini', jumlah: 5),
-    StokItem(id: '16', nama: 'Bouquet Hijab', jumlah: 19),
-    StokItem(id: '17', nama: 'Money Bouquet', jumlah: 13),
-    StokItem(id: '18', nama: 'Bloom Box', jumlah: 7),
-  ];
 
   @override
   void initState() {
@@ -56,52 +35,7 @@ class _MainScreenState extends State<MainScreen> {
     _selectedIndex = 0;
   }
 
-  // ... (Fungsi _addStok, _updateStok, _restockStok biarkan apa adanya) ...
-
-  // --- PERBAIKAN: Fungsi _kurangiStok dihapus karena 'items' sudah tidak ada ---
-  /* void _kurangiStok(List<OrderItem> items) {
-    setState(() {
-      for (var orderItem in items) {
-        final index =
-            stokList.indexWhere((stok) => stok.id == orderItem.stokItemId);
-        if (index != -1) {
-          stokList[index].jumlah -= orderItem.jumlah;
-        }
-      }
-    });
-  }
-  */
-
-  void _addStok(String nama, int jumlah) {
-    setState(() {
-      stokList.add(
-        StokItem(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          nama: nama,
-          jumlah: jumlah,
-        ),
-      );
-    });
-  }
-
-  void _updateStok(String id, String newName, int newJumlah) {
-    setState(() {
-      final index = stokList.indexWhere((item) => item.id == id);
-      if (index != -1) {
-        stokList[index].nama = newName;
-        stokList[index].jumlah = newJumlah;
-      }
-    });
-  }
-
-  void _restockStok(String id, int additionalJumlah) {
-    setState(() {
-      final index = stokList.indexWhere((item) => item.id == id);
-      if (index != -1) {
-        stokList[index].jumlah += additionalJumlah;
-      }
-    });
-  }
+  // Stock-related functions have been removed
 
   void _addSewa(Sewa data) {
     setState(() {
@@ -153,24 +87,15 @@ class _MainScreenState extends State<MainScreen> {
       DashboardScreen(
         sewaCount: sewaList.length,
         pesananCount: pesananList.length,
-        stokCount: stokList.length,
-        onNavigateToSewa: () => _onItemTapped(3),
-        onNavigateToPesanan: () => _onItemTapped(4),
-        onNavigateToStok: () => _onItemTapped(2),
+        onNavigateToSewa: () => _onItemTapped(2),
+        onNavigateToPesanan: () => _onItemTapped(3),
         currentUser: widget.currentUser,
         onLogout: _logout,
       ),
       PencatatanScreen(
-        // --- PERBAIKAN: 'stokList: stokList' dihapus ---
         onConfirmSewa: _addSewa,
         onConfirmPesanan: _addPesanan,
         onNavigateAfterSubmit: (int pageIndex) => _onItemTapped(pageIndex),
-      ),
-      StokScreen(
-        stokList: stokList,
-        onAdd: _addStok,
-        onUpdate: _updateStok,
-        onRestock: _restockStok,
       ),
       SewaScreen(sewaList: sewaList, onDelete: _deleteSewa),
       PemesananScreen(pesananList: pesananList, onDelete: _deletePesanan),
@@ -184,10 +109,6 @@ class _MainScreenState extends State<MainScreen> {
       const BottomNavigationBarItem(
         icon: Icon(Icons.edit_note_rounded),
         label: "Pencatatan",
-      ),
-      const BottomNavigationBarItem(
-        icon: Icon(Icons.inventory_2_rounded),
-        label: "Stok",
       ),
       const BottomNavigationBarItem(
         icon: Icon(Icons.shopping_cart_rounded),

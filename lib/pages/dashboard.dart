@@ -7,10 +7,8 @@ import '../widgets/shared_widgets.dart';
 class DashboardScreen extends StatelessWidget {
   final int sewaCount;
   final int pesananCount;
-  final int stokCount;
   final VoidCallback onNavigateToSewa;
   final VoidCallback onNavigateToPesanan;
-  final VoidCallback onNavigateToStok;
   final User currentUser;
   final VoidCallback onLogout;
 
@@ -18,10 +16,8 @@ class DashboardScreen extends StatelessWidget {
     super.key,
     required this.sewaCount,
     required this.pesananCount,
-    required this.stokCount,
     required this.onNavigateToSewa,
     required this.onNavigateToPesanan,
-    required this.onNavigateToStok,
     required this.currentUser,
     required this.onLogout,
   });
@@ -173,15 +169,6 @@ class DashboardScreen extends StatelessWidget {
                 onTap: onNavigateToPesanan,
               )),
             ],
-          ),
-          const SizedBox(height: 16),
-          StatCard(
-            icon: Icons.inventory_2_outlined,
-            label: 'Jenis Barang di Stok',
-            value: stokCount.toString(),
-            color: AppColors.accentBlue,
-            onTap: onNavigateToStok,
-            isFullWidth: true,
           ),
           const SizedBox(height: 24),
           const Text('Aktivitas Terbaru', style: AppTextStyles.heading2),
