@@ -1,6 +1,6 @@
 // lib/widgets/shared_widgets.dart
 
-import 'package:flutter/material.dart'; // <--- INI YANG HILANG
+import 'package:flutter/material.dart'; // <--- PASTIKAN INI ADA
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
@@ -158,14 +158,14 @@ class InfoRow extends StatelessWidget {
 
 class SewaListTile extends StatelessWidget {
   final Sewa item;
-  final VoidCallback onDelete;
-  final VoidCallback onEdit; // <-- TAMBAHAN
+  final VoidCallback? onDelete; // <-- DIBUAT NULLABLE
+  final VoidCallback? onEdit; // <-- DIBUAT NULLABLE
 
   const SewaListTile({
     super.key,
     required this.item,
     required this.onDelete,
-    required this.onEdit, // <-- TAMBAHAN
+    required this.onEdit,
   });
 
   @override
@@ -183,31 +183,31 @@ class SewaListTile extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // <-- Dibungkus Expanded agar nama tidak overflow
                 Expanded(
                   child: Text(item.nama, style: AppTextStyles.subtitle),
                 ),
-                // --- PERUBAHAN DI SINI ---
-                IconButton(
-                  icon: const Icon(
-                    Icons.edit_outlined,
-                    color: AppColors.accentBlue, // Ganti warna
+                
+                // --- PERUBAHAN DI SINI (CEK NULL) ---
+                if (onEdit != null)
+                  IconButton(
+                    icon: const Icon(
+                      Icons.edit_outlined,
+                      color: AppColors.accentBlue,
+                    ),
+                    onPressed: onEdit,
                   ),
-                  onPressed: onEdit, // Panggil onEdit
-                ),
-                IconButton(
-                  icon: const Icon(
-                    Icons.delete_outline_rounded,
-                    color: AppColors.accentRed,
+                if (onDelete != null)
+                  IconButton(
+                    icon: const Icon(
+                      Icons.delete_outline_rounded,
+                      color: AppColors.accentRed,
+                    ),
+                    onPressed: onDelete,
                   ),
-                  onPressed: onDelete, // Panggil onDelete
-                ),
                 // --- AKHIR PERUBAHAN ---
               ],
             ),
             const SizedBox(height: 8),
-
-            // --- Menampilkan Keterangan ---
             Text(
               item.keterangan,
               style: AppTextStyles.body.copyWith(
@@ -215,9 +215,7 @@ class SewaListTile extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-
             const Divider(height: 24),
-
             InfoRow(icon: Icons.phone_outlined, text: item.noHp),
             InfoRow(
               icon: Icons.receipt_long_outlined,
@@ -246,14 +244,14 @@ class SewaListTile extends StatelessWidget {
 
 class PesananListTile extends StatelessWidget {
   final Pesanan item;
-  final VoidCallback onDelete;
-  final VoidCallback onEdit; // <-- TAMBAHAN
+  final VoidCallback? onDelete; // <-- DIBUAT NULLABLE
+  final VoidCallback? onEdit; // <-- DIBUAT NULLABLE
 
   const PesananListTile({
     super.key,
     required this.item,
     required this.onDelete,
-    required this.onEdit, // <-- TAMBAHAN
+    required this.onEdit,
   });
 
   @override
@@ -271,31 +269,31 @@ class PesananListTile extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // <-- Dibungkus Expanded agar nama tidak overflow
                 Expanded(
                   child: Text(item.nama, style: AppTextStyles.subtitle),
                 ),
-                // --- PERUBAHAN DI SINI ---
-                IconButton(
-                  icon: const Icon(
-                    Icons.edit_outlined,
-                    color: AppColors.accentBlue,
+                
+                // --- PERUBAHAN DI SINI (CEK NULL) ---
+                if (onEdit != null)
+                  IconButton(
+                    icon: const Icon(
+                      Icons.edit_outlined,
+                      color: AppColors.accentBlue,
+                    ),
+                    onPressed: onEdit,
                   ),
-                  onPressed: onEdit, // Panggil onEdit
-                ),
-                IconButton(
-                  icon: const Icon(
-                    Icons.delete_outline_rounded,
-                    color: AppColors.accentRed,
+                if (onDelete != null)
+                  IconButton(
+                    icon: const Icon(
+                      Icons.delete_outline_rounded,
+                      color: AppColors.accentRed,
+                    ),
+                    onPressed: onDelete,
                   ),
-                  onPressed: onDelete, // Panggil onDelete
-                ),
                 // --- AKHIR PERUBAHAN ---
               ],
             ),
             const SizedBox(height: 8),
-
-            // --- Menampilkan Keterangan ---
             Text(
               item.keterangan,
               style: AppTextStyles.body.copyWith(
@@ -303,9 +301,7 @@ class PesananListTile extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-
             const Divider(height: 24),
-
             InfoRow(icon: Icons.phone_outlined, text: item.noHp),
             InfoRow(icon: Icons.location_on_outlined, text: item.alamat),
             InfoRow(
