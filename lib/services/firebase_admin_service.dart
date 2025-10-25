@@ -23,10 +23,7 @@ class FirebaseAdminService {
       FirebaseAdminService._privateConstructor();
 
   Future<void> _initialize() async {
-    final adminApp = await Firebase.initializeApp(
-      name: 'admin-app',
-      options: Firebase.app().options,
-    );
+    final adminApp = Firebase.app('admin-app');
 
     _adminAuth = firebase_auth.FirebaseAuth.instanceFor(app: adminApp);
     _adminDatabase = FirebaseDatabase.instanceFor(app: adminApp);
