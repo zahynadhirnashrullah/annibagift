@@ -105,21 +105,3 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
-
-flutter_native_splash:
-  color: "#6A5ACD"          # Warna background (ungu lembut sesuai tema)
-  image: assets/LogoAnnibaTransparant.png  # Logo splash
-  android: true
-  ios: true
-
-  android_12:
-    color: "#6A5ACD"
-    image: assets/LogoAnnibaTransparant.png
-
-  web: false                # Matikan untuk web agar lebih ringan
-
-  # Durasi minimal splash sebelum lanjut ke app
-  # (Splash screen tetap otomatis tertutup begitu app siap)
-  android_gravity: center
-  ios_content_mode: center
-

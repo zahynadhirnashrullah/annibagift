@@ -40,7 +40,6 @@ class _PencatatanScreenState extends State<PencatatanScreen>
   DateTime? _selectedPickupDate;
   String? _selectedJaminan;
   SewaStatus? _selectedSewaStatus;
-  PesananStatus? _selectedPesananStatus;
 
   final List<String> _jaminanOptions = [
     "KTP",
@@ -211,7 +210,6 @@ class _PencatatanScreenState extends State<PencatatanScreen>
       _selectedPickupDate = null;
       _selectedJaminan = null;
       _selectedSewaStatus = null;
-      _selectedPesananStatus = null;
     });
   }
   // --- AKHIR LOGIKA (TIDAK BERUBAH) ---
