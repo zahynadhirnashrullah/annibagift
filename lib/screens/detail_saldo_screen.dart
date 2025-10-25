@@ -88,8 +88,15 @@ class _DetailSaldoScreenState extends State<DetailSaldoScreen> {
     final formKey = GlobalKey<FormState>();
     final deskripsiController =
         TextEditingController(text: pengeluaran?.deskripsi);
-    final hargaController =
-        TextEditingController(text: pengeluaran?.harga.toStringAsFixed(0));
+    
+    // --- PERBAIKAN DI SINI (Opsional tapi disarankan) ---
+    // Tampilkan harga yang diformat di dialog edit
+    final String hargaAwal = pengeluaran?.harga != null
+        ? NumberFormat('#,###', 'id_ID').format(pengeluaran!.harga)
+        : '';
+    final hargaController = TextEditingController(text: hargaAwal);
+    // --- AKHIR PERBAIKAN ---
+
     DateTime selectedDate = pengeluaran?.tanggal ?? DateTime.now();
 
     showDialog(
@@ -113,7 +120,7 @@ class _DetailSaldoScreenState extends State<DetailSaldoScreen> {
                     const SizedBox(height: 16),
                     buildTextField(
                       hargaController,
-                      'Harga',
+                      'Harga', // <-- Label ini sekarang akan diformat oleh shared_widgets
                       Icons.price_change_outlined,
                       keyboardType: TextInputType.number,
                     ),
@@ -156,10 +163,19 @@ class _DetailSaldoScreenState extends State<DetailSaldoScreen> {
                 ElevatedButton(
                   onPressed: () {
                     if (formKey.currentState!.validate()) {
+                      
+                      // --- PERBAIKAN DI SINI ---
+                      // Hapus titik sebelum parsing
+                      final double hargaParsed = 
+                          double.tryParse(hargaController.text.replaceAll('.', '')) ?? 0.0;
+                      // --- AKHIR PERBAIKAN ---
+
                       final newPengeluaran = Pengeluaran(
                         id: pengeluaran?.id,
                         deskripsi: deskripsiController.text,
-                        harga: double.tryParse(hargaController.text) ?? 0.0,
+                        // --- PERBAIKAN DI SINI ---
+                        harga: hargaParsed, // Gunakan nilai yang sudah bersih
+                        // --- AKHIR PERBAIKAN ---
                         tanggal: selectedDate,
                       );
 

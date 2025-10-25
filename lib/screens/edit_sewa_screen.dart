@@ -48,7 +48,12 @@ class _EditSewaScreenState extends State<EditSewaScreen> {
     _durasiController.text = widget.sewa.durasi.toString();
     _noHpController.text = widget.sewa.noHp;
     _keteranganController.text = widget.sewa.keterangan;
-    _hargaController.text = widget.sewa.totalHarga.toStringAsFixed(0);
+
+    // --- PERBAIKAN DI SINI ---
+    // Tampilkan harga yang sudah diformat saat mengedit
+    _hargaController.text = NumberFormat('#,###', 'id_ID').format(widget.sewa.totalHarga);
+    // --- AKHIR PERBAIKAN ---
+
     _selectedDate = widget.sewa.tanggal;
     _selectedJaminan = widget.sewa.jaminan;
     _selectedSewaStatus = widget.sewa.status;
@@ -116,7 +121,12 @@ class _EditSewaScreenState extends State<EditSewaScreen> {
       noHp: _noHpController.text,
       tanggal: _selectedDate!,
       tanggalDibuat: widget.sewa.tanggalDibuat,
-      totalHarga: double.tryParse(_hargaController.text) ?? 0.0,
+      
+      // --- PERBAIKAN DI SINI ---
+      // Hapus titik '.' sebelum parsing
+      totalHarga: double.tryParse(_hargaController.text.replaceAll('.', '')) ?? 0.0,
+      // --- AKHIR PERBAIKAN ---
+
       keterangan: _keteranganController.text,
       durasi: int.tryParse(_durasiController.text) ?? 0,
       jaminan: _selectedJaminan!,

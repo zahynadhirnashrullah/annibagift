@@ -45,7 +45,7 @@ class _PencatatanScreenState extends State<PencatatanScreen>
   final List<String> _jaminanOptions = [
     "KTP",
     "SIM",
-    "Kartu Pelajar",
+"Kartu Pelajar",
     "Uang Tunai Rp300.000",
   ];
 
@@ -116,7 +116,11 @@ class _PencatatanScreenState extends State<PencatatanScreen>
     }
 
     final String noHp = _noHpController.text;
-    final double totalHarga = double.tryParse(_hargaController.text) ?? 0.0;
+    
+    // Hapus titik '.' sebelum melakukan parsing
+    final double totalHarga = 
+        double.tryParse(_hargaController.text.replaceAll('.', '')) ?? 0.0;
+
     final String keterangan = _keteranganController.text;
 
     if (isSewaTab) {
@@ -154,7 +158,7 @@ class _PencatatanScreenState extends State<PencatatanScreen>
         alamat: _alamatController.text,
         noHp: noHp,
         tanggal: _selectedDate!,
-        totalHarga: totalHarga,
+        totalHarga: totalHarga, 
         keterangan: keterangan,
         durasi: int.tryParse(_durasiController.text) ?? 0,
         jaminan: _selectedJaminan!,
@@ -168,7 +172,9 @@ class _PencatatanScreenState extends State<PencatatanScreen>
           backgroundColor: AppColors.accentGreen,
         ),
       );
-      widget.onNavigateAfterSubmit(3);
+      // --- PERBAIKAN DI SINI ---
+      widget.onNavigateAfterSubmit(2); // Mengarah ke SewaScreen (index 2)
+      // --- AKHIR PERBAIKAN ---
     } else {
       if (_selectedPickupDate == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -183,7 +189,7 @@ class _PencatatanScreenState extends State<PencatatanScreen>
         nama: _namaController.text,
         alamat: _alamatController.text,
         noHp: noHp,
-        totalHarga: totalHarga,
+        totalHarga: totalHarga, 
         keterangan: keterangan,
         status: PesananStatus.proses, // Always starts as process
       );
@@ -195,7 +201,9 @@ class _PencatatanScreenState extends State<PencatatanScreen>
           backgroundColor: AppColors.accentGreen,
         ),
       );
-      widget.onNavigateAfterSubmit(4);
+      // --- PERBAIKAN DI SINI ---
+      widget.onNavigateAfterSubmit(3); // Mengarah ke PemesananScreen (index 3)
+      // --- AKHIR PERBAIKAN ---
     }
   }
 

@@ -1,6 +1,6 @@
 // lib/widgets/shared_widgets.dart
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; // <--- INI YANG HILANG
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
@@ -50,14 +50,17 @@ Widget buildTextField(
 }) {
   // For price formatting
   List<TextInputFormatter>? formatters;
-  if (label == 'Total Harga') {
+
+  // Pastikan label 'Harga' (dari detail_saldo) juga mendapatkan formatting
+  if (label == 'Total Harga' || label == 'Harga') {
     formatters = [
       FilteringTextInputFormatter.digitsOnly,
       TextInputFormatter.withFunction((oldValue, newValue) {
         if (newValue.text.isEmpty) {
           return newValue;
         }
-        final int? value = int.tryParse(newValue.text.replaceAll(',', ''));
+        // newValue.text sudah dijamin hanya angka (digitsOnly)
+        final int? value = int.tryParse(newValue.text);
         if (value != null) {
           final formatter = NumberFormat('#,###', 'id_ID');
           final String formatted = formatter.format(value);
@@ -90,7 +93,8 @@ Widget buildTextField(
         (value) {
           if (value == null || value.isEmpty) {
             // Validasi khusus untuk harga dan durasi agar bisa 0
-            if (label == 'Total Harga' || label.contains('Durasi')) {
+            // Tambahkan 'Harga' ke validasi khusus
+            if (label == 'Total Harga' || label.contains('Durasi') || label == 'Harga') {
               if (value != null &&
                   value.isNotEmpty &&
                   double.tryParse(value) == null) {
