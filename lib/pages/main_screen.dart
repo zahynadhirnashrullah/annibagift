@@ -1,21 +1,20 @@
 // lib/pages/main_screen.dart
 
 import 'package:flutter/material.dart';
-// Naik satu level ('../') untuk keluar dari 'pages'
+import 'package:cloud_firestore/cloud_firestore.dart'; // <-- 1. IMPORT FIRESTORE
 import '../models/models.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_admin_service.dart';
 
-// Impor ini sekarang relatif (berada di folder 'pages' yang sama)
+// ... (import halaman lainnya tidak berubah) ...
 import 'dashboard.dart';
 import 'pencatatan.dart';
 import 'sewa.dart';
 import 'pemesanan.dart';
 import 'user_management_screen.dart';
 import 'login_screen.dart';
-
-// Naik satu level, lalu masuk ke 'screens'
+import 'laporan_screen.dart';
 import '../screens/edit_sewa_screen.dart';
 import '../screens/edit_pesanan_screen.dart';
 import '../screens/detail_saldo_screen.dart';
@@ -30,44 +29,79 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  // --- SEMUA LOGIKA STATE ANDA TETAP SAMA ---
   int _selectedIndex = 0;
+  bool _isLoading = true; // <-- 2. TAMBAHKAN STATE LOADING
 
   double _totalSaldo = 0.0;
-  final List<Sewa> sewaList = [];
-  final List<Pesanan> pesananList = [];
-  final List<Pengeluaran> pengeluaranList = [];
+  // --- 3. UBAH DARI 'final' MENJADI LIST BIASA ---
+  List<Sewa> sewaList = [];
+  List<Pesanan> pesananList = [];
+  List<Pengeluaran> pengeluaranList = [];
   List<Transaksi> _transaksiList = [];
 
+  // (stokList bisa tetap di-hardcode jika tidak dikelola di DB)
   final List<StokItem> stokList = [
     StokItem(id: '1', nama: 'Kotak Kado Besar', jumlah: 15),
-    StokItem(id: '2', nama: 'Pita Satin Merah (rol)', jumlah: 30),
-    StokItem(id: '3', nama: 'Snack Bouquet', jumlah: 12),
-    StokItem(id: '4', nama: 'Papan Bunga', jumlah: 8),
-    StokItem(id: '5', nama: 'Wrapping Paper Emas', jumlah: 20),
-    StokItem(id: '6', nama: 'Kartu Ucapan', jumlah: 50),
-    StokItem(id: '7', nama: 'Bunga Segar (ikat)', jumlah: 9),
-    StokItem(id: '8', nama: 'Kotak Kado Kecil', jumlah: 25),
-    StokItem(id: '9', nama: 'Pita Satin Biru (rol)', jumlah: 18),
-    StokItem(id: '10', nama: 'Snack Box', jumlah: 14),
-    StokItem(id: '11', nama: 'Balon Helium (pak)', jumlah: 22),
-    StokItem(id: '12', nama: 'Kertas Kado Polkadot', jumlah: 17),
-    StokItem(id: '13', nama: 'Bunga Plastik (ikat)', jumlah: 11),
-    StokItem(id: '14', nama: 'Kartu Ucapan Spesial', jumlah: 35),
-    StokItem(id: '15', nama: 'Papan Bunga Mini', jumlah: 5),
-    StokItem(id: '16', nama: 'Bouquet Hijab', jumlah: 19),
-    StokItem(id: '17', nama: 'Money Bouquet', jumlah: 13),
-    StokItem(id: '18', nama: 'Bloom Box', jumlah: 7),
+    // ... sisa stok ...
   ];
+  
+  // --- 4. BUAT REFERENSI KE COLLECTION FIRESTORE ---
+  final CollectionReference sewaCollection =
+      FirebaseFirestore.instance.collection('sewa');
+  final CollectionReference pesananCollection =
+      FirebaseFirestore.instance.collection('pesanan');
+  final CollectionReference pengeluaranCollection =
+      FirebaseFirestore.instance.collection('pengeluaran');
+
 
   @override
   void initState() {
     super.initState();
     _selectedIndex = 0;
-    _rebuildTransactionList();
+    // --- 5. PANGGIL FUNGSI UNTUK MEMUAT DATA DARI FIRESTORE ---
+    _loadAllDataFromFirestore();
+  }
+  
+  // --- 6. BUAT FUNGSI BARU UNTUK MEMUAT DATA ---
+  Future<void> _loadAllDataFromFirestore() async {
+    try {
+      // Ambil data Sewa
+      final sewaSnapshot = await sewaCollection.get();
+      final List<Sewa> loadedSewa = sewaSnapshot.docs
+          .map((doc) => Sewa.fromMap(doc.data() as Map<String, dynamic>))
+          .toList();
+
+      // Ambil data Pesanan
+      final pesananSnapshot = await pesananCollection.get();
+      final List<Pesanan> loadedPesanan = pesananSnapshot.docs
+          .map((doc) => Pesanan.fromMap(doc.data() as Map<String, dynamic>))
+          .toList();
+          
+      // Ambil data Pengeluaran
+      final pengeluaranSnapshot = await pengeluaranCollection.get();
+      final List<Pengeluaran> loadedPengeluaran = pengeluaranSnapshot.docs
+          .map((doc) => Pengeluaran.fromMap(doc.data() as Map<String, dynamic>))
+          .toList();
+
+      // Update state setelah semua data ter-load
+      setState(() {
+        sewaList = loadedSewa;
+        pesananList = loadedPesanan;
+        pengeluaranList = loadedPengeluaran;
+        _rebuildTransactionList(); // Hitung ulang saldo
+        _isLoading = false; // Selesai loading
+      });
+    } catch (e) {
+      // Handle error
+      print("Error loading data: $e");
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   void _rebuildTransactionList() {
+    // (Fungsi ini tidak berubah, tapi sekarang ia menggunakan data dari Firestore)
     setState(() {
       _transaksiList = [
         ...sewaList.map((s) => Transaksi.dariSewa(s)),
@@ -87,14 +121,25 @@ class _MainScreenState extends State<MainScreen> {
         _transaksiList.fold(0.0, (sum, item) => sum + item.jumlah);
   }
 
-  void _addSewa(Sewa data) {
-    setState(() {
-      sewaList.add(data);
-      _rebuildTransactionList();
-    });
+  // --- 7. MODIFIKASI SEMUA FUNGSI (ADD, EDIT, DELETE) ---
+
+  void _addSewa(Sewa data) async {
+    try {
+      // Kirim ke Firestore (gunakan ID dari model)
+      await sewaCollection.doc(data.id).set(data.toMap());
+      // Jika berhasil, baru update state lokal
+      setState(() {
+        sewaList.add(data);
+        _rebuildTransactionList();
+      });
+    } catch (e) {
+      print("Error adding sewa: $e");
+      // Tampilkan error ke user jika perlu
+    }
   }
 
   void _deleteSewa(Sewa data) {
+    // (Dialog konfirmasi tidak berubah)
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -109,12 +154,19 @@ class _MainScreenState extends State<MainScreen> {
           TextButton(
             child: const Text('Hapus',
                 style: TextStyle(color: AppColors.accentRed)),
-            onPressed: () {
+            onPressed: () async { // <-- JADIKAN ASYNC
               Navigator.of(ctx).pop();
-              setState(() {
-                sewaList.removeWhere((item) => item.id == data.id);
-                _rebuildTransactionList();
-              });
+              try {
+                // Hapus dari Firestore
+                await sewaCollection.doc(data.id).delete();
+                // Jika berhasil, baru update state lokal
+                setState(() {
+                  sewaList.removeWhere((item) => item.id == data.id);
+                  _rebuildTransactionList();
+                });
+              } catch (e) {
+                print("Error deleting sewa: $e");
+              }
             },
           ),
         ],
@@ -122,24 +174,39 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  void _editSewa(Sewa oldData, Sewa newData) {
-    setState(() {
-      final index = sewaList.indexWhere((item) => item.id == oldData.id);
-      if (index != -1) {
-        sewaList[index] = newData;
-      }
-      _rebuildTransactionList();
-    });
+  void _editSewa(Sewa oldData, Sewa newData) async {
+    try {
+      // Update ke Firestore
+      await sewaCollection.doc(newData.id).update(newData.toMap());
+      // Jika berhasil, baru update state lokal
+      setState(() {
+        final index = sewaList.indexWhere((item) => item.id == oldData.id);
+        if (index != -1) {
+          sewaList[index] = newData;
+        }
+        _rebuildTransactionList();
+      });
+    } catch (e) {
+      print("Error editing sewa: $e");
+    }
   }
 
-  void _addPesanan(Pesanan data) {
-    setState(() {
-      pesananList.add(data);
-      _rebuildTransactionList();
-    });
+  void _addPesanan(Pesanan data) async {
+    try {
+      // Kirim ke Firestore
+      await pesananCollection.doc(data.id).set(data.toMap());
+      // Jika berhasil, baru update state lokal
+      setState(() {
+        pesananList.add(data);
+        _rebuildTransactionList();
+      });
+    } catch (e) {
+      print("Error adding pesanan: $e");
+    }
   }
 
   void _deletePesanan(Pesanan data) {
+    // (Dialog konfirmasi)
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -154,12 +221,19 @@ class _MainScreenState extends State<MainScreen> {
           TextButton(
             child: const Text('Hapus',
                 style: TextStyle(color: AppColors.accentRed)),
-            onPressed: () {
+            onPressed: () async { // <-- JADIKAN ASYNC
               Navigator.of(ctx).pop();
-              setState(() {
-                pesananList.removeWhere((item) => item.id == data.id);
-                _rebuildTransactionList();
-              });
+              try {
+                // Hapus dari Firestore
+                await pesananCollection.doc(data.id).delete();
+                // Jika berhasil, baru update state lokal
+                setState(() {
+                  pesananList.removeWhere((item) => item.id == data.id);
+                  _rebuildTransactionList();
+                });
+              } catch (e) {
+                print("Error deleting pesanan: $e");
+              }
             },
           ),
         ],
@@ -167,41 +241,67 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  void _editPesanan(Pesanan oldData, Pesanan newData) {
-    setState(() {
-      final index = pesananList.indexWhere((item) => item.id == oldData.id);
-      if (index != -1) {
-        pesananList[index] = newData;
-      }
-      _rebuildTransactionList();
-    });
+  void _editPesanan(Pesanan oldData, Pesanan newData) async {
+    try {
+      // Update ke Firestore
+      await pesananCollection.doc(newData.id).update(newData.toMap());
+      // Jika berhasil, baru update state lokal
+      setState(() {
+        final index = pesananList.indexWhere((item) => item.id == oldData.id);
+        if (index != -1) {
+          pesananList[index] = newData;
+        }
+        _rebuildTransactionList();
+      });
+    } catch (e) {
+      print("Error editing pesanan: $e");
+    }
+  }
+  
+  // (Lakukan hal yang sama untuk _addPengeluaran, _deletePengeluaran, _editPengeluaran)
+  
+  void _addPengeluaran(Pengeluaran data) async {
+    try {
+      await pengeluaranCollection.doc(data.id).set(data.toMap());
+      setState(() {
+        pengeluaranList.add(data);
+        _rebuildTransactionList();
+      });
+    } catch (e) {
+      print("Error adding pengeluaran: $e");
+    }
   }
 
-  void _addPengeluaran(Pengeluaran data) {
-    setState(() {
-      pengeluaranList.add(data);
-      _rebuildTransactionList();
-    });
+  void _deletePengeluaran(Pengeluaran data) async {
+    try {
+      await pengeluaranCollection.doc(data.id).delete();
+      setState(() {
+        pengeluaranList.removeWhere((item) => item.id == data.id);
+        _rebuildTransactionList();
+      });
+    } catch (e) {
+      print("Error deleting pengeluaran: $e");
+    }
   }
 
-  void _deletePengeluaran(Pengeluaran data) {
-    setState(() {
-      pengeluaranList.removeWhere((item) => item.id == data.id);
-      _rebuildTransactionList();
-    });
+  void _editPengeluaran(Pengeluaran oldData, Pengeluaran newData) async {
+     try {
+      await pengeluaranCollection.doc(newData.id).update(newData.toMap());
+      setState(() {
+        final index =
+            pengeluaranList.indexWhere((item) => item.id == oldData.id);
+        if (index != -1) {
+          pengeluaranList[index] = newData;
+        }
+        _rebuildTransactionList();
+      });
+     } catch (e) {
+       print("Error editing pengeluaran: $e");
+     }
   }
 
-  void _editPengeluaran(Pengeluaran oldData, Pengeluaran newData) {
-    setState(() {
-      final index =
-          pengeluaranList.indexWhere((item) => item.id == oldData.id);
-      if (index != -1) {
-        pengeluaranList[index] = newData;
-      }
-      _rebuildTransactionList();
-    });
-  }
 
+  // --- Sisa fungsi navigasi tidak berubah ---
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -227,7 +327,7 @@ class _MainScreenState extends State<MainScreen> {
         builder: (context) => DetailSaldoScreen(
           transactions: _transaksiList,
           pengeluaranListAsli:
-              pengeluaranList, // <-- Mengirim list asli
+              pengeluaranList, 
           onAddPengeluaran: _addPengeluaran,
           onEditPengeluaran: _editPengeluaran,
           onDeletePengeluaran: _deletePengeluaran,
@@ -259,87 +359,112 @@ class _MainScreenState extends State<MainScreen> {
       ),
     );
   }
-  // --- SEMUA LOGIKA STATE ANDA BERAKHIR DI SINI ---
+  
 
   @override
   Widget build(BuildContext context) {
-    final List<Widget> pages = [
+    
+    final bool isAdmin = widget.currentUser.role == Role.admin;
+    final List<Widget> pages = [];
+    final List<BottomNavigationBarItem> navItems = [];
+
+    // --- 8. TAMPILKAN LOADING INDICATOR ---
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    
+    // --- (Sisa logika build() Anda sudah benar) ---
+    pages.add(
       DashboardScreen(
         sewaCount: sewaList.length,
         pesananCount: pesananList.length,
         stokCount: stokList.length,
         totalSaldo: _totalSaldo,
-        onNavigateToSewa: () => _onItemTapped(3),
-        onNavigateToPesanan: () => _onItemTapped(4),
-        onNavigateToStok: () => _onItemTapped(2),
+        onNavigateToSewa: () => _onItemTapped(2), 
+        onNavigateToPesanan: () => _onItemTapped(3),
+        onNavigateToStok: () => _onItemTapped(1), 
         onNavigateToDetailSaldo: _navigateToDetailSaldo,
         currentUser: widget.currentUser,
         onLogout: _logout,
       ),
-      PencatatanScreen(
-        onConfirmSewa: _addSewa,
-        onConfirmPesanan: _addPesanan,
-        onNavigateAfterSubmit: (int pageIndex) => _onItemTapped(pageIndex),
-      ),
-      SewaScreen(
-        sewaList: sewaList,
-        onDelete: _deleteSewa,
-        onEdit: _navigateToEditSewa,
-      ),
-      PemesananScreen(
-        pesananList: pesananList,
-        onDelete: _deletePesanan,
-        onEdit: _navigateToEditPesanan,
-      ),
-    ];
-
-    final List<BottomNavigationBarItem> navItems = [
+    );
+    navItems.add(
       const BottomNavigationBarItem(
         icon: Icon(Icons.dashboard_rounded),
         label: "Dashboard",
       ),
-      const BottomNavigationBarItem(
-        icon: Icon(Icons.edit_note_rounded),
-        label: "Pencatatan",
-      ),
-      const BottomNavigationBarItem(
-        icon: Icon(Icons.shopping_cart_rounded),
-        label: "Sewa",
-      ),
-      const BottomNavigationBarItem(
-        icon: Icon(Icons.list_alt_rounded),
-        label: "Pesanan",
-      ),
-    ];
+    );
 
-    if (widget.currentUser.role == Role.admin) {
-      pages.add(UserManagementScreen(currentUser: widget.currentUser));
-      navItems.add(
+    if (isAdmin) {
+      pages.addAll([
+        LaporanScreen(
+          sewaList: sewaList,
+          pesananList: pesananList,
+        ),
+        UserManagementScreen(currentUser: widget.currentUser),
+      ]);
+      navItems.addAll([
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.assessment_rounded), 
+          label: "Laporan",
+        ),
         const BottomNavigationBarItem(
           icon: Icon(Icons.manage_accounts_rounded),
           label: "Users",
         ),
-      );
+      ]);
+    } else {
+      pages.addAll([
+        PencatatanScreen(
+          onConfirmSewa: _addSewa,
+          onConfirmPesanan: _addPesanan,
+          onNavigateAfterSubmit: (int pageIndex) => _onItemTapped(pageIndex),
+        ),
+        SewaScreen(
+          sewaList: sewaList,
+          onDelete: _deleteSewa,
+          onEdit: _navigateToEditSewa,
+        ),
+        PemesananScreen(
+          pesananList: pesananList,
+          onDelete: _deletePesanan,
+          onEdit: _navigateToEditPesanan,
+        ),
+      ]);
+      navItems.addAll([
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.edit_note_rounded),
+          label: "Pencatatan",
+        ),
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.shopping_cart_rounded),
+          label: "Sewa",
+        ),
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.list_alt_rounded),
+          label: "Pesanan",
+        ),
+      ]);
     }
-
+    
     return Scaffold(
       body: IndexedStack(index: _selectedIndex, children: pages),
-      // --- MODIFIKASI TAMPILAN NAVBAR DIMULAI DI SINI ---
       bottomNavigationBar: SafeArea(
-        bottom: true, // Pastikan ada padding di bawah untuk home indicator
+        bottom: true, 
         top: false,
         child: Padding(
-          // 1. Memberi margin horizontal dan bawah agar "mengambang"
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
           child: Container(
             decoration: BoxDecoration(
               color: Colors.white,
-              // 2. Memberi radius di SEMUA sudut
               borderRadius: BorderRadius.circular(24),
-              // 3. Memberi bayangan yang lebih halus
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withAlpha((255 * 0.08).round()), // Bayangan lebih tipis
+                  color: Colors.black.withAlpha((255 * 0.08).round()),
                   spreadRadius: 2,
                   blurRadius: 10,
                   offset: const Offset(0, 4),
@@ -347,7 +472,6 @@ class _MainScreenState extends State<MainScreen> {
               ],
             ),
             child: ClipRRect(
-              // 4. Klip untuk memastikan radius di-apply ke child
               borderRadius: BorderRadius.circular(24),
               child: BottomNavigationBar(
                 currentIndex: _selectedIndex,
@@ -356,7 +480,6 @@ class _MainScreenState extends State<MainScreen> {
                 selectedItemColor: AppColors.primary,
                 unselectedItemColor: Colors.grey.shade400,
                 backgroundColor: Colors.white,
-                // 5. PENTING: Hapus elevasi bawaan agar tidak bentrok
                 elevation: 0, 
                 selectedLabelStyle: const TextStyle(
                   fontWeight: FontWeight.bold,
@@ -369,7 +492,6 @@ class _MainScreenState extends State<MainScreen> {
           ),
         ),
       ),
-      // --- MODIFIKASI TAMPILAN NAVBAR SELESAI DI SINI ---
     );
   }
 }

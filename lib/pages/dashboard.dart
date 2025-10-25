@@ -13,7 +13,7 @@ class DashboardScreen extends StatelessWidget {
   final double totalSaldo;
   final VoidCallback onNavigateToSewa;
   final VoidCallback onNavigateToPesanan;
-  final VoidCallback onNavigateToStok;
+  final VoidCallback onNavigateToStok; // Ini akan kita gunakan untuk Laporan Admin
   final VoidCallback onNavigateToDetailSaldo;
   final User currentUser;
   final VoidCallback onLogout;
@@ -42,6 +42,9 @@ class DashboardScreen extends StatelessWidget {
       if (hour >= 15 && hour <= 17) return 'Selamat Sore';
       return 'Selamat Malam';
     }
+
+    // Tentukan apakah admin
+    final bool isAdmin = currentUser.role == Role.admin;
 
     return Scaffold(
       appBar: AppBar(
@@ -92,8 +95,8 @@ class DashboardScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-      Text("${timeGreeting()}, ${currentUser.username}!",
-        style: AppTextStyles.heading1),
+          Text("${timeGreeting()}, ${currentUser.username}!",
+              style: AppTextStyles.heading1),
           const SizedBox(height: 8),
           const Text("Berikut ringkasan bisnis Anda hari ini.",
               style: AppTextStyles.body),
@@ -163,7 +166,8 @@ class DashboardScreen extends StatelessWidget {
                 label: 'Sewa Aktif',
                 value: sewaCount.toString(),
                 color: AppColors.accentPink,
-                onTap: onNavigateToSewa,
+                // --- PERUBAHAN DI SINI ---
+                onTap: isAdmin ? onNavigateToStok : onNavigateToSewa,
               )),
               const SizedBox(width: 16),
               Expanded(
@@ -172,10 +176,12 @@ class DashboardScreen extends StatelessWidget {
                 label: 'Total Pesanan',
                 value: pesananCount.toString(),
                 color: AppColors.accentGreen,
-                onTap: onNavigateToPesanan,
+                // --- PERUBAHAN DI SINI ---
+                onTap: isAdmin ? onNavigateToStok : onNavigateToPesanan,
               )),
             ],
           ),
+          // --- AKHIR PERUBAHAN ---
           const SizedBox(height: 24),
           const SizedBox(height: 24),
           const Text('Aktivitas Terbaru', style: AppTextStyles.heading2),

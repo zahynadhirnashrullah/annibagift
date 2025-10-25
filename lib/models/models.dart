@@ -1,5 +1,6 @@
 // lib/models/models.dart
 
+import 'package:cloud_firestore/cloud_firestore.dart'; // <-- TAMBAHKAN IMPORT INI
 import 'package:uuid/uuid.dart';
 
 var uuid = const Uuid();
@@ -24,7 +25,6 @@ class StokItem {
   StokItem({required this.id, required this.nama, required this.jumlah});
 }
 
-// --- PERUBAHAN DI SINI ---
 enum SewaStatus {
   proses,
   selesai,
@@ -32,36 +32,71 @@ enum SewaStatus {
 }
 
 class Sewa {
-  final String id; // TAMBAHAN
+  final String id;
   final String nama;
   final String alamat;
   final String noHp;
-  final DateTime tanggal; // Ini tanggal kembali
-  final DateTime tanggalDibuat; // TAMBAHAN
+  final DateTime tanggal;
+  final DateTime tanggalDibuat;
   final String keterangan;
   final double totalHarga;
   final int durasi;
   final String jaminan;
-  final SewaStatus status; // TAMBAHAN
+  final SewaStatus status;
 
   Sewa({
-    String? id, // TAMBAHAN
+    String? id,
     required this.nama,
     required this.alamat,
     required this.noHp,
     required this.tanggal,
-    DateTime? tanggalDibuat, // TAMBAHAN
+    DateTime? tanggalDibuat,
     required this.totalHarga,
     required this.keterangan,
     required this.durasi,
     required this.jaminan,
-    SewaStatus? status, // TAMBAHAN
-  })  : id = id ?? uuid.v4(), // TAMBAHAN
-        tanggalDibuat = tanggalDibuat ?? DateTime.now(), // TAMBAHAN
-        status = status ?? SewaStatus.proses; // TAMBAHAN
+    SewaStatus? status,
+  })  : id = id ?? uuid.v4(),
+        tanggalDibuat = tanggalDibuat ?? DateTime.now(),
+        status = status ?? SewaStatus.proses;
+
+  // --- TAMBAHAN UNTUK FIRESTORE ---
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'nama': nama,
+      'alamat': alamat,
+      'noHp': noHp,
+      'tanggal': Timestamp.fromDate(tanggal), // Simpan sebagai Timestamp
+      'tanggalDibuat': Timestamp.fromDate(tanggalDibuat), // Simpan sebagai Timestamp
+      'keterangan': keterangan,
+      'totalHarga': totalHarga,
+      'durasi': durasi,
+      'jaminan': jaminan,
+      'status': status.name, // Simpan enum sebagai String (e.g., "proses")
+    };
+  }
+
+  static Sewa fromMap(Map<String, dynamic> map) {
+    return Sewa(
+      id: map['id'],
+      nama: map['nama'],
+      alamat: map['alamat'],
+      noHp: map['noHp'],
+      tanggal: (map['tanggal'] as Timestamp).toDate(), // Baca Timestamp
+      tanggalDibuat: (map['tanggalDibuat'] as Timestamp).toDate(), // Baca Timestamp
+      totalHarga: map['totalHarga'],
+      keterangan: map['keterangan'],
+      durasi: map['durasi'],
+      jaminan: map['jaminan'],
+      // Baca String dan ubah kembali ke Enum
+      status: SewaStatus.values
+          .firstWhere((e) => e.name == map['status'], orElse: () => SewaStatus.proses),
+    );
+  }
+  // --- AKHIR TAMBAHAN ---
 }
 
-// --- PERUBAHAN DI SINI ---
 enum PesananStatus {
   proses,
   selesai,
@@ -90,9 +125,37 @@ class Pesanan {
   })  : id = id ?? uuid.v4(),
         tanggalDibuat = tanggalDibuat ?? DateTime.now(),
         status = status ?? PesananStatus.proses;
+
+  // --- TAMBAHAN UNTUK FIRESTORE ---
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'nama': nama,
+      'alamat': alamat,
+      'noHp': noHp,
+      'totalHarga': totalHarga,
+      'keterangan': keterangan,
+      'tanggalDibuat': Timestamp.fromDate(tanggalDibuat), // Simpan sebagai Timestamp
+      'status': status.name, // Simpan enum sebagai String
+    };
+  }
+
+  static Pesanan fromMap(Map<String, dynamic> map) {
+    return Pesanan(
+      id: map['id'],
+      nama: map['nama'],
+      alamat: map['alamat'],
+      noHp: map['noHp'],
+      totalHarga: map['totalHarga'],
+      keterangan: map['keterangan'],
+      tanggalDibuat: (map['tanggalDibuat'] as Timestamp).toDate(), // Baca Timestamp
+      status: PesananStatus.values
+          .firstWhere((e) => e.name == map['status'], orElse: () => PesananStatus.proses),
+    );
+  }
+  // --- AKHIR TAMBAHAN ---
 }
 
-// --- FILE BARU DI SINI ---
 class Pengeluaran {
   final String id;
   final String deskripsi;
@@ -105,7 +168,29 @@ class Pengeluaran {
     required this.harga,
     required this.tanggal,
   }) : id = id ?? uuid.v4();
+  
+  // --- TAMBAHAN UNTUK FIRESTORE ---
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'deskripsi': deskripsi,
+      'harga': harga,
+      'tanggal': Timestamp.fromDate(tanggal),
+    };
+  }
+  
+  static Pengeluaran fromMap(Map<String, dynamic> map) {
+    return Pengeluaran(
+      id: map['id'],
+      deskripsi: map['deskripsi'],
+      harga: map['harga'],
+      tanggal: (map['tanggal'] as Timestamp).toDate(),
+    );
+  }
+  // --- AKHIR TAMBAHAN ---
 }
+
+// ... (Sisa Transaksi, Role, dan User tidak perlu diubah, sudah benar) ...
 
 // --- FILE BARU DI SINI ---
 enum TipeTransaksi { sewa, pesanan, pengeluaran }

@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 // --- PERBAIKAN DI SINI ---
+import 'package:intl/intl.dart'; // Import intl untuk formatting
 import '../../models/models.dart';
 import '../../widgets/shared_widgets.dart';
 import '../../theme/app_theme.dart';
@@ -37,7 +38,12 @@ class _EditPesananScreenState extends State<EditPesananScreen> {
     _alamatController.text = widget.pesanan.alamat;
     _noHpController.text = widget.pesanan.noHp;
     _keteranganController.text = widget.pesanan.keterangan;
-    _hargaController.text = widget.pesanan.totalHarga.toStringAsFixed(0);
+    
+    // --- PERBAIKAN DI SINI ---
+    // Tampilkan harga yang sudah diformat saat mengedit
+    _hargaController.text = NumberFormat('#,###', 'id_ID').format(widget.pesanan.totalHarga);
+    // --- AKHIR PERBAIKAN ---
+
     _selectedPesananStatus = widget.pesanan.status;
   }
 
@@ -70,7 +76,12 @@ class _EditPesananScreenState extends State<EditPesananScreen> {
       nama: _namaController.text,
       alamat: _alamatController.text,
       noHp: _noHpController.text,
-      totalHarga: double.tryParse(_hargaController.text) ?? 0.0,
+
+      // --- PERBAIKAN DI SINI ---
+      // Hapus titik '.' sebelum parsing
+      totalHarga: double.tryParse(_hargaController.text.replaceAll('.', '')) ?? 0.0,
+      // --- AKHIR PERBAIKAN ---
+      
       keterangan: _keteranganController.text,
       tanggalDibuat: widget.pesanan.tanggalDibuat,
       status: _selectedPesananStatus ?? PesananStatus.proses,
