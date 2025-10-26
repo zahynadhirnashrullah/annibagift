@@ -48,12 +48,7 @@ class _EditSewaScreenState extends State<EditSewaScreen> {
     _durasiController.text = widget.sewa.durasi.toString();
     _noHpController.text = widget.sewa.noHp;
     _keteranganController.text = widget.sewa.keterangan;
-
-    // --- PERBAIKAN DI SINI ---
-    // Tampilkan harga yang sudah diformat saat mengedit
     _hargaController.text = NumberFormat('#,###', 'id_ID').format(widget.sewa.totalHarga);
-    // --- AKHIR PERBAIKAN ---
-
     _selectedDate = widget.sewa.tanggal;
     _selectedJaminan = widget.sewa.jaminan;
     _selectedSewaStatus = widget.sewa.status;
@@ -86,6 +81,7 @@ class _EditSewaScreenState extends State<EditSewaScreen> {
     if (!_sewaFormKey.currentState!.validate()) {
       return;
     }
+    // ... (Validasi lainnya tidak berubah) ...
     if (_keteranganController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -115,22 +111,23 @@ class _EditSewaScreenState extends State<EditSewaScreen> {
     }
 
     final updatedSewa = Sewa(
-      id: widget.sewa.id,
+      id: widget.sewa.id, // ID lama
       nama: _namaController.text,
       alamat: _alamatController.text,
       noHp: _noHpController.text,
       tanggal: _selectedDate!,
-      tanggalDibuat: widget.sewa.tanggalDibuat,
-      
-      // --- PERBAIKAN DI SINI ---
-      // Hapus titik '.' sebelum parsing
+      tanggalDibuat: widget.sewa.tanggalDibuat, // Tanggal dibuat tidak berubah
       totalHarga: double.tryParse(_hargaController.text.replaceAll('.', '')) ?? 0.0,
-      // --- AKHIR PERBAIKAN ---
-
       keterangan: _keteranganController.text,
       durasi: int.tryParse(_durasiController.text) ?? 0,
       jaminan: _selectedJaminan!,
       status: _selectedSewaStatus ?? SewaStatus.proses,
+      
+      // --- PERUBAHAN PENTING DI SINI ---
+      // Memastikan data pemilik asli tidak berubah saat diedit
+      createdById: widget.sewa.createdById,
+      createdByName: widget.sewa.createdByName,
+      // --- AKHIR PERUBAHAN ---
     );
 
     widget.onConfirmEdit(widget.sewa, updatedSewa);
@@ -200,11 +197,10 @@ class _EditSewaScreenState extends State<EditSewaScreen> {
     );
   }
 
+  // ... (Widget _buildJaminanDropdown, _buildDatePicker, _buildSewaStatusDropdown tidak berubah) ...
   Widget _buildJaminanDropdown() {
     return DropdownButtonFormField<String>(
-      // --- PERBAIKAN LINTER: use 'initialValue' instead of deprecated 'value' ---
       initialValue: _selectedJaminan,
-      // --- AKHIR PERBAIKAN ---
       items: _jaminanOptions
           .map((e) => DropdownMenuItem(value: e, child: Text(e)))
           .toList(),

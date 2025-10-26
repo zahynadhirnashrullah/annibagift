@@ -9,11 +9,13 @@ import '../widgets/shared_widgets.dart';
 class LaporanScreen extends StatefulWidget {
   final List<Sewa> sewaList;
   final List<Pesanan> pesananList;
+  final List<User> employees; // <-- 1. TERIMA DAFTAR KARYAWAN
 
   const LaporanScreen({
     super.key,
     required this.sewaList,
     required this.pesananList,
+    required this.employees, // <-- 2. TAMBAHKAN DI KONSTRUKTOR
   });
 
   @override
@@ -23,6 +25,7 @@ class LaporanScreen extends StatefulWidget {
 class _LaporanScreenState extends State<LaporanScreen> {
   int? _selectedMonth;
   int? _selectedYear;
+  String? _selectedEmployeeId; // <-- 3. STATE UNTUK FILTER KARYAWAN
   List<int> _availableYears = [];
 
   List<Sewa> _filteredSewaList = [];
@@ -40,8 +43,8 @@ class _LaporanScreenState extends State<LaporanScreen> {
     final now = DateTime.now();
     _selectedMonth = now.month;
     _selectedYear = now.year;
+    _selectedEmployeeId = null; // Default: Tampilkan semua
 
-    // Buat daftar tahun (misal: dari 2023 hingga tahun ini)
     final int currentYear = now.year;
     _availableYears =
         List<int>.generate(currentYear - 2022, (index) => 2023 + index);
@@ -54,7 +57,11 @@ class _LaporanScreenState extends State<LaporanScreen> {
           _selectedYear == null || sewa.tanggalDibuat.year == _selectedYear;
       final bool monthMatch = _selectedMonth == null ||
           sewa.tanggalDibuat.month == _selectedMonth;
-      return yearMatch && monthMatch;
+      // --- 4. LOGIKA FILTER KARYAWAN ---
+      final bool employeeMatch = _selectedEmployeeId == null ||
+          sewa.createdById == _selectedEmployeeId;
+      
+      return yearMatch && monthMatch && employeeMatch; // <-- 5. TAMBAHKAN
     }).toList();
 
     // Filter Pesanan
@@ -63,7 +70,11 @@ class _LaporanScreenState extends State<LaporanScreen> {
           pesanan.tanggalDibuat.year == _selectedYear;
       final bool monthMatch = _selectedMonth == null ||
           pesanan.tanggalDibuat.month == _selectedMonth;
-      return yearMatch && monthMatch;
+      // --- 4. LOGIKA FILTER KARYAWAN ---
+      final bool employeeMatch = _selectedEmployeeId == null ||
+          pesanan.createdById == _selectedEmployeeId;
+
+      return yearMatch && monthMatch && employeeMatch; // <-- 5. TAMBAHKAN
     }).toList();
 
     // Hitung total omset
@@ -95,13 +106,8 @@ class _LaporanScreenState extends State<LaporanScreen> {
         ),
         body: Column(
           children: [
-            // --- BAGIAN FILTER ---
             _buildFilterSection(),
-            
-            // --- BAGIAN SUMMARY ---
             _buildSummarySection(),
-            
-            // --- BAGIAN LIST ---
             Expanded(
               child: TabBarView(
                 children: [
@@ -120,68 +126,98 @@ class _LaporanScreenState extends State<LaporanScreen> {
     return Container(
       padding: const EdgeInsets.all(16.0),
       color: AppColors.background,
-      child: Row(
+      child: Column(
         children: [
-          // Filter Bulan
-          Expanded(
-            flex: 2,
-            child: DropdownButtonFormField<int>(
-              value: _selectedMonth,
-              decoration: const InputDecoration(
-                labelText: 'Bulan',
-                border: OutlineInputBorder(),
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: EdgeInsets.symmetric(horizontal: 12.0),
+          Row(
+            children: [
+              // Filter Bulan
+              Expanded(
+                flex: 2,
+                child: DropdownButtonFormField<int>(
+                  value: _selectedMonth,
+                  decoration: const InputDecoration(
+                    labelText: 'Bulan',
+                    border: OutlineInputBorder(),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12.0),
+                  ),
+                  items: [
+                    const DropdownMenuItem(value: null, child: Text("Semua Bulan")),
+                    ...List.generate(12, (index) {
+                      return DropdownMenuItem(
+                        value: index + 1,
+                        child: Text(DateFormat('MMMM', 'id_ID').format(DateTime(0, index + 1))),
+                      );
+                    }),
+                  ],
+                  onChanged: (value) {
+                    setState(() => _selectedMonth = value);
+                    _runFilter();
+                  },
+                ),
               ),
-              items: [
-                const DropdownMenuItem(value: null, child: Text("Semua Bulan")),
-                ...List.generate(12, (index) {
-                  return DropdownMenuItem(
-                    value: index + 1,
-                    child: Text(DateFormat('MMMM', 'id_ID').format(DateTime(0, index + 1))),
-                  );
-                }),
-              ],
-              onChanged: (value) {
-                setState(() => _selectedMonth = value);
-                _runFilter();
-              },
-            ),
+              const SizedBox(width: 16),
+              // Filter Tahun
+              Expanded(
+                flex: 1,
+                child: DropdownButtonFormField<int>(
+                  value: _selectedYear,
+                  decoration: const InputDecoration(
+                    labelText: 'Tahun',
+                    border: OutlineInputBorder(),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12.0),
+                  ),
+                  items: [
+                    const DropdownMenuItem(value: null, child: Text("Semua")),
+                    ..._availableYears.map((year) {
+                      return DropdownMenuItem(
+                        value: year,
+                        child: Text(year.toString()),
+                      );
+                    }),
+                  ],
+                  onChanged: (value) {
+                    setState(() => _selectedYear = value);
+                    _runFilter();
+                  },
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 16),
-          
-          // Filter Tahun
-          Expanded(
-            flex: 1,
-            child: DropdownButtonFormField<int>(
-              value: _selectedYear,
-              decoration: const InputDecoration(
-                labelText: 'Tahun',
-                border: OutlineInputBorder(),
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: EdgeInsets.symmetric(horizontal: 12.0),
-              ),
-              items: [
-                const DropdownMenuItem(value: null, child: Text("Semua")),
-                ..._availableYears.map((year) {
-                  return DropdownMenuItem(
-                    value: year,
-                    child: Text(year.toString()),
-                  );
-                }),
-              ],
-              onChanged: (value) {
-                setState(() => _selectedYear = value);
-                _runFilter();
-              },
+          const SizedBox(height: 16), // Jarak
+          // --- 6. TAMBAHKAN DROPDOWN KARYAWAN ---
+          DropdownButtonFormField<String>(
+            value: _selectedEmployeeId,
+            decoration: const InputDecoration(
+              labelText: 'Filter per Karyawan',
+              border: OutlineInputBorder(),
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: EdgeInsets.symmetric(horizontal: 12.0),
             ),
+            items: [
+              const DropdownMenuItem(value: null, child: Text("Semua Karyawan")),
+              ...widget.employees.map((User user) {
+                return DropdownMenuItem(
+                  value: user.id,
+                  child: Text(user.username),
+                );
+              }),
+            ],
+            onChanged: (value) {
+              setState(() => _selectedEmployeeId = value);
+              _runFilter();
+            },
           ),
         ],
       ),
     );
   }
+  
+  // ... (Sisa LaporanScreen tidak berubah) ...
 
   Widget _buildSummarySection() {
     final formatCurrency = NumberFormat.decimalPattern('id_ID');
@@ -235,8 +271,8 @@ class _LaporanScreenState extends State<LaporanScreen> {
         final item = _filteredSewaList[index];
         return SewaListTile(
           item: item,
-          onDelete: null, // Laporan = Read Only
-          onEdit: null, // Laporan = Read Only
+          onDelete: null,
+          onEdit: null, 
         );
       },
     );
@@ -256,8 +292,8 @@ class _LaporanScreenState extends State<LaporanScreen> {
         final item = _filteredPesananList[index];
         return PesananListTile(
           item: item,
-          onDelete: null, // Laporan = Read Only
-          onEdit: null, // Laporan = Read Only
+          onDelete: null,
+          onEdit: null,
         );
       },
     );

@@ -1,10 +1,11 @@
 // lib/models/models.dart
 
-import 'package:cloud_firestore/cloud_firestore.dart'; // <-- TAMBAHKAN IMPORT INI
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 
 var uuid = const Uuid();
 
+// ... (OrderItem dan StokItem tidak berubah) ...
 class OrderItem {
   final String stokItemId;
   final String namaBarang;
@@ -25,6 +26,7 @@ class StokItem {
   StokItem({required this.id, required this.nama, required this.jumlah});
 }
 
+
 enum SewaStatus {
   proses,
   selesai,
@@ -43,6 +45,10 @@ class Sewa {
   final int durasi;
   final String jaminan;
   final SewaStatus status;
+  // --- TAMBAHAN UNTUK DATA PER-KARYAWAN ---
+  final String createdById;
+  final String createdByName;
+  // --- AKHIR TAMBAHAN ---
 
   Sewa({
     String? id,
@@ -56,24 +62,29 @@ class Sewa {
     required this.durasi,
     required this.jaminan,
     SewaStatus? status,
+    // --- TAMBAHAN DI KONSTRUKTOR ---
+    required this.createdById,
+    required this.createdByName,
   })  : id = id ?? uuid.v4(),
         tanggalDibuat = tanggalDibuat ?? DateTime.now(),
         status = status ?? SewaStatus.proses;
 
-  // --- TAMBAHAN UNTUK FIRESTORE ---
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'nama': nama,
       'alamat': alamat,
       'noHp': noHp,
-      'tanggal': Timestamp.fromDate(tanggal), // Simpan sebagai Timestamp
-      'tanggalDibuat': Timestamp.fromDate(tanggalDibuat), // Simpan sebagai Timestamp
+      'tanggal': Timestamp.fromDate(tanggal),
+      'tanggalDibuat': Timestamp.fromDate(tanggalDibuat),
       'keterangan': keterangan,
       'totalHarga': totalHarga,
       'durasi': durasi,
       'jaminan': jaminan,
-      'status': status.name, // Simpan enum sebagai String (e.g., "proses")
+      'status': status.name,
+      // --- TAMBAHAN UNTUK DISIMPAN ---
+      'createdById': createdById,
+      'createdByName': createdByName,
     };
   }
 
@@ -83,18 +94,20 @@ class Sewa {
       nama: map['nama'],
       alamat: map['alamat'],
       noHp: map['noHp'],
-      tanggal: (map['tanggal'] as Timestamp).toDate(), // Baca Timestamp
-      tanggalDibuat: (map['tanggalDibuat'] as Timestamp).toDate(), // Baca Timestamp
+      tanggal: (map['tanggal'] as Timestamp).toDate(),
+      tanggalDibuat: (map['tanggalDibuat'] as Timestamp).toDate(),
       totalHarga: map['totalHarga'],
       keterangan: map['keterangan'],
       durasi: map['durasi'],
       jaminan: map['jaminan'],
-      // Baca String dan ubah kembali ke Enum
       status: SewaStatus.values
           .firstWhere((e) => e.name == map['status'], orElse: () => SewaStatus.proses),
+      // --- TAMBAHAN UNTUK DIBACA ---
+      // Jika data lama belum punya 'createdById', beri nilai default (misal 'admin_legacy')
+      createdById: map['createdById'] ?? 'admin_legacy',
+      createdByName: map['createdByName'] ?? 'Data Lama',
     );
   }
-  // --- AKHIR TAMBAHAN ---
 }
 
 enum PesananStatus {
@@ -112,6 +125,10 @@ class Pesanan {
   final String keterangan;
   final DateTime tanggalDibuat;
   final PesananStatus status;
+  // --- TAMBAHAN UNTUK DATA PER-KARYAWAN ---
+  final String createdById;
+  final String createdByName;
+  // --- AKHIR TAMBAHAN ---
 
   Pesanan({
     String? id,
@@ -122,11 +139,13 @@ class Pesanan {
     required this.keterangan,
     DateTime? tanggalDibuat,
     PesananStatus? status,
+    // --- TAMBAHAN DI KONSTRUKTOR ---
+    required this.createdById,
+    required this.createdByName,
   })  : id = id ?? uuid.v4(),
         tanggalDibuat = tanggalDibuat ?? DateTime.now(),
         status = status ?? PesananStatus.proses;
 
-  // --- TAMBAHAN UNTUK FIRESTORE ---
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -135,8 +154,11 @@ class Pesanan {
       'noHp': noHp,
       'totalHarga': totalHarga,
       'keterangan': keterangan,
-      'tanggalDibuat': Timestamp.fromDate(tanggalDibuat), // Simpan sebagai Timestamp
-      'status': status.name, // Simpan enum sebagai String
+      'tanggalDibuat': Timestamp.fromDate(tanggalDibuat),
+      'status': status.name,
+      // --- TAMBAHAN UNTUK DISIMPAN ---
+      'createdById': createdById,
+      'createdByName': createdByName,
     };
   }
 
@@ -148,12 +170,14 @@ class Pesanan {
       noHp: map['noHp'],
       totalHarga: map['totalHarga'],
       keterangan: map['keterangan'],
-      tanggalDibuat: (map['tanggalDibuat'] as Timestamp).toDate(), // Baca Timestamp
+      tanggalDibuat: (map['tanggalDibuat'] as Timestamp).toDate(),
       status: PesananStatus.values
           .firstWhere((e) => e.name == map['status'], orElse: () => PesananStatus.proses),
+      // --- TAMBAHAN UNTUK DIBACA ---
+      createdById: map['createdById'] ?? 'admin_legacy',
+      createdByName: map['createdByName'] ?? 'Data Lama',
     );
   }
-  // --- AKHIR TAMBAHAN ---
 }
 
 class Pengeluaran {
@@ -161,38 +185,47 @@ class Pengeluaran {
   final String deskripsi;
   final double harga;
   final DateTime tanggal;
+  // --- TAMBAHAN UNTUK DATA PER-KARYAWAN ---
+  final String createdById;
+  final String createdByName;
+  // --- AKHIR TAMBAHAN ---
 
   Pengeluaran({
     String? id,
     required this.deskripsi,
     required this.harga,
     required this.tanggal,
+    // --- TAMBAHAN DI KONSTRUKTOR ---
+    required this.createdById,
+    required this.createdByName,
   }) : id = id ?? uuid.v4();
-  
-  // --- TAMBAHAN UNTUK FIRESTORE ---
+
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'deskripsi': deskripsi,
       'harga': harga,
       'tanggal': Timestamp.fromDate(tanggal),
+      // --- TAMBAHAN UNTUK DISIMPAN ---
+      'createdById': createdById,
+      'createdByName': createdByName,
     };
   }
-  
+
   static Pengeluaran fromMap(Map<String, dynamic> map) {
     return Pengeluaran(
       id: map['id'],
       deskripsi: map['deskripsi'],
       harga: map['harga'],
       tanggal: (map['tanggal'] as Timestamp).toDate(),
+      // --- TAMBAHAN UNTUK DIBACA ---
+      createdById: map['createdById'] ?? 'admin_legacy',
+      createdByName: map['createdByName'] ?? 'Data Lama',
     );
   }
-  // --- AKHIR TAMBAHAN ---
 }
 
-// ... (Sisa Transaksi, Role, dan User tidak perlu diubah, sudah benar) ...
-
-// --- FILE BARU DI SINI ---
+// ... (Transaksi, Role, dan User tidak berubah) ...
 enum TipeTransaksi { sewa, pesanan, pengeluaran }
 
 class Transaksi {
@@ -217,7 +250,8 @@ class Transaksi {
     return Transaksi(
       id: uuid.v4(),
       tipe: TipeTransaksi.sewa,
-      deskripsi: "Sewa: ${sewa.nama} - ${sewa.keterangan}",
+      // Tambahkan nama karyawan di deskripsi
+      deskripsi: "Sewa: ${sewa.nama} (${sewa.createdByName}) - ${sewa.keterangan}",
       jumlah: sewa.totalHarga,
       tanggal: sewa.tanggalDibuat,
       referensiId: sewa.id,
@@ -228,7 +262,8 @@ class Transaksi {
     return Transaksi(
       id: uuid.v4(),
       tipe: TipeTransaksi.pesanan,
-      deskripsi: "Pesanan: ${pesanan.nama} - ${pesanan.keterangan}",
+      // Tambahkan nama karyawan di deskripsi
+      deskripsi: "Pesanan: ${pesanan.nama} (${pesanan.createdByName}) - ${pesanan.keterangan}",
       jumlah: pesanan.totalHarga,
       tanggal: pesanan.tanggalDibuat,
       referensiId: pesanan.id,
@@ -239,7 +274,8 @@ class Transaksi {
     return Transaksi(
       id: uuid.v4(),
       tipe: TipeTransaksi.pengeluaran,
-      deskripsi: "Pengeluaran: ${pengeluaran.deskripsi}",
+      // Tambahkan nama karyawan di deskripsi
+      deskripsi: "Pengeluaran: ${pengeluaran.deskripsi} (${pengeluaran.createdByName})",
       jumlah: -pengeluaran.harga, // Pengeluaran adalah nilai negatif
       tanggal: pengeluaran.tanggal,
       referensiId: pengeluaran.id,
@@ -247,7 +283,6 @@ class Transaksi {
   }
 }
 
-// --- Role dan User tidak berubah ---
 enum Role { admin, karyawan }
 
 class User {

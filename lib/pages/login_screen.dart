@@ -1,13 +1,13 @@
 // lib/screens/login_screen.dart
-import 'dart:ui'; // <-- TAMBAHKAN IMPORT INI UNTUK EFEK BLUR
+import 'dart:ui'; 
 import 'package:flutter/material.dart';
+import 'package:connectivity_plus/connectivity_plus.dart'; // <-- 1. TAMBAHKAN IMPORT INI
+
 // Import service yang benar
 import '../services/auth_service.dart';
 import '../services/firebase_admin_service.dart'; // Import admin service
 import '../theme/app_theme.dart';
 import '../widgets/shared_widgets.dart';
-// --- PERBAIKAN: Sesuaikan jalur impor berdasarkan struktur Anda ---
-// (Jika main_screen.dart ada di 'lib/pages/', ini harusnya '../pages/main_screen.dart')
 import '../pages/main_screen.dart'; 
 import '../models/models.dart'; // Import model untuk Role
 
@@ -19,7 +19,6 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // --- TIDAK ADA PERUBAHAN PADA LOGIKA ---
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -30,6 +29,23 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() {
         _isLoading = true;
       });
+      
+      // --- 2. TAMBAHKAN BLOK PENGECEKAN KONEKSI DI SINI ---
+      final connectivityResult = await (Connectivity().checkConnectivity());
+      if (connectivityResult.contains(ConnectivityResult.none)) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tidak ada koneksi internet. Silakan periksa jaringan Anda.'),
+            backgroundColor: AppColors.accentRed,
+          ),
+        );
+        setState(() {
+          _isLoading = false;
+        });
+        return; // Hentikan login jika tidak ada koneksi
+      }
+      // --- AKHIR TAMBAHAN (Sisa kode di bawah ini adalah milik Anda) ---
 
       try {
         final email = _emailController.text;
@@ -89,11 +105,9 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     }
   }
-  // --- AKHIR DARI LOGIKA (TIDAK BERUBAH) ---
 
   // --- WIDGET BUILDER BARU UNTUK TEXTFIELD KACA ---
-  // Kita buat widget helper baru di sini agar tidak merusak
-  // `buildTextField` di `shared_widgets.dart` yang dipakai layar lain.
+  // (Tidak ada perubahan di sini)
   Widget _buildGlassTextField(
     TextEditingController controller,
     String label,
@@ -145,9 +159,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // --- MODIFIKASI TAMPILAN DIMULAI DI SINI ---
+    // --- (Tidak ada perubahan di sini) ---
     return Scaffold(
-      // Kita gunakan Stack agar bisa menumpuk gradient, blur, dan konten
       body: Stack(
         children: [
           // 1. Latar Belakang Gradient (menutupi seluruh layar)
@@ -164,20 +177,18 @@ class _LoginScreenState extends State<LoginScreen> {
           // 2. Konten yang bisa di-scroll
           SafeArea(
             child: SingleChildScrollView(
-              // Kita beri padding agar tidak terlalu mepet di tepi
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Beri jarak dari atas
                     SizedBox(height: MediaQuery.of(context).size.height * 0.1),
 
                     // Logo Anda
                     Image.asset(
                       'assets/LogoAnnibaTransparant.png',
-                      height: 180, // Ukuran logo sedikit disesuaikan
+                      height: 180, 
                       width: 180,
                     ),
                     const SizedBox(height: 16),
@@ -203,19 +214,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 40),
 
                     // 3. Kartu Kaca (Glassmorphism)
-                    // ClipRRect diperlukan agar efek blur tidak "bocor"
                     ClipRRect(
                       borderRadius: BorderRadius.circular(16),
                       child: BackdropFilter(
-                        // Ini adalah efek blur-nya
                         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                         child: Container(
                           padding: const EdgeInsets.all(24.0),
                           decoration: BoxDecoration(
-                            // Warna kaca semi-transparan
                               color: Colors.white.withAlpha((255 * 0.15).round()),
                             borderRadius: BorderRadius.circular(16),
-                            // Border tipis untuk memberi kesan "tepi" kaca
                             border: Border.all(
                                 color: Colors.white.withAlpha((255 * 0.2).round()),
                             ),
@@ -224,7 +231,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             key: _formKey,
                             child: Column(
                               children: [
-                                // Menggunakan TextField kustom kita
                                 _buildGlassTextField(
                                   _emailController,
                                   'Email',
@@ -241,7 +247,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                   },
                                 ),
                                 const SizedBox(height: 20),
-                                // Menggunakan TextField kustom kita
                                 _buildGlassTextField(
                                   _passwordController,
                                   'Password',
@@ -262,7 +267,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ? const CircularProgressIndicator(
                                                 valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                               )
-                                    // Menggunakan tombol gradient Anda yang sudah ada
                                     : buildGradientButton(
                                         'Login',
                                         Icons.login_rounded,
@@ -274,7 +278,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ),
-                    // Beri jarak di bawah
                     SizedBox(height: MediaQuery.of(context).size.height * 0.1),
                   ],
                 ),
@@ -284,6 +287,5 @@ class _LoginScreenState extends State<LoginScreen> {
         ],
       ),
     );
-    // --- MODIFIKASI TAMPILAN SELESAI DI SINI ---
   }
 }
