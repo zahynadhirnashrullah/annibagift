@@ -309,10 +309,6 @@ class _DetailSaldoScreenState extends State<DetailSaldoScreen> {
                     itemBuilder: (context, index) {
                       final tx = _filteredTransactions[index];
                       // --- 5. PENGECEKAN HAK AKSES EDIT (OPSIONAL) ---
-                      bool canEditOrDelete = widget.currentUser.role == Role.admin ||
-                                           (tx.tipe == TipeTransaksi.pengeluaran && 
-                                            tx.referensiId == _findPengeluaranById(tx.referensiId)?.createdById);
-                      
                       // Cek data pengeluaran asli
                       Pengeluaran? p = (tx.tipe == TipeTransaksi.pengeluaran) 
                                        ? _findPengeluaranById(tx.referensiId) 

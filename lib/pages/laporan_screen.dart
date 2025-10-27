@@ -134,7 +134,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
               Expanded(
                 flex: 2,
                 child: DropdownButtonFormField<int>(
-                  value: _selectedMonth,
+                  initialValue: _selectedMonth,
                   decoration: const InputDecoration(
                     labelText: 'Bulan',
                     border: OutlineInputBorder(),
@@ -162,7 +162,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
               Expanded(
                 flex: 1,
                 child: DropdownButtonFormField<int>(
-                  value: _selectedYear,
+                  initialValue: _selectedYear,
                   decoration: const InputDecoration(
                     labelText: 'Tahun',
                     border: OutlineInputBorder(),
@@ -190,7 +190,7 @@ class _LaporanScreenState extends State<LaporanScreen> {
           const SizedBox(height: 16), // Jarak
           // --- 6. TAMBAHKAN DROPDOWN KARYAWAN ---
           DropdownButtonFormField<String>(
-            value: _selectedEmployeeId,
+            initialValue: _selectedEmployeeId,
             decoration: const InputDecoration(
               labelText: 'Filter per Karyawan',
               border: OutlineInputBorder(),

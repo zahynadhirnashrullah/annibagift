@@ -165,7 +165,7 @@ class _MainScreenState extends State<MainScreen> {
         _isLoading = false; 
       });
     } catch (e) {
-      print("Error loading data: $e");
+      debugPrint("Error loading data: $e");
       setState(() {
         _isLoading = false;
       });
@@ -189,7 +189,7 @@ class _MainScreenState extends State<MainScreen> {
       return;
     }
     _totalSaldo =
-        _transaksiList.fold(0.0, (sum, item) => sum + item.jumlah);
+        _transaksiList.fold(0.0, (previous, item) => previous + item.jumlah);
   }
 
   void _addSewa(Sewa data) async {
@@ -200,7 +200,7 @@ class _MainScreenState extends State<MainScreen> {
         _rebuildTransactionList();
       });
     } catch (e) {
-      print("Error adding sewa: $e");
+      debugPrint("Error adding sewa: $e");
     }
   }
 
@@ -228,7 +228,7 @@ class _MainScreenState extends State<MainScreen> {
                   _rebuildTransactionList();
                 });
               } catch (e) {
-                print("Error deleting sewa: $e");
+                debugPrint("Error deleting sewa: $e");
               }
             },
           ),
@@ -264,7 +264,7 @@ class _MainScreenState extends State<MainScreen> {
         _rebuildTransactionList();
       });
     } catch (e) {
-      print("Error editing sewa: $e");
+      debugPrint("Error editing sewa: $e");
     }
   }
 
@@ -276,7 +276,7 @@ class _MainScreenState extends State<MainScreen> {
         _rebuildTransactionList();
       });
     } catch (e) {
-      print("Error adding pesanan: $e");
+      debugPrint("Error adding pesanan: $e");
     }
   }
 
@@ -304,7 +304,7 @@ class _MainScreenState extends State<MainScreen> {
                   _rebuildTransactionList();
                 });
               } catch (e) {
-                print("Error deleting pesanan: $e");
+                debugPrint("Error deleting pesanan: $e");
               }
             },
           ),
@@ -337,7 +337,7 @@ class _MainScreenState extends State<MainScreen> {
         _rebuildTransactionList();
       });
     } catch (e) {
-      print("Error editing pesanan: $e");
+      debugPrint("Error editing pesanan: $e");
     }
   }
   
@@ -349,14 +349,14 @@ class _MainScreenState extends State<MainScreen> {
         _rebuildTransactionList();
       });
     } catch (e) {
-      print("Error adding pengeluaran: $e");
+      debugPrint("Error adding pengeluaran: $e");
     }
   }
 
   void _deletePengeluaran(Pengeluaran data) async {
     try {
       if (widget.currentUser.role != Role.admin && data.createdById != widget.currentUser.id) {
-         print("Akses ditolak: Karyawan tidak bisa menghapus data orang lain.");
+         debugPrint("Akses ditolak: Karyawan tidak bisa menghapus data orang lain.");
          return;
       }
       
@@ -366,7 +366,7 @@ class _MainScreenState extends State<MainScreen> {
         _rebuildTransactionList();
       });
     } catch (e) {
-      print("Error deleting pengeluaran: $e");
+      debugPrint("Error deleting pengeluaran: $e");
     }
   }
 
@@ -391,7 +391,7 @@ class _MainScreenState extends State<MainScreen> {
         _rebuildTransactionList();
       });
      } catch (e) {
-       print("Error editing pengeluaran: $e");
+       debugPrint("Error editing pengeluaran: $e");
      }
   }
 

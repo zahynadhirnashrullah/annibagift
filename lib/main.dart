@@ -10,6 +10,8 @@ import 'package:intl/date_symbol_data_local.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize secondary admin app
   await Firebase.initializeApp(
     name: 'admin-app',
     options: DefaultFirebaseOptions.currentPlatform,
