@@ -16,11 +16,13 @@ class FirebaseAdminService {
   late final FirebaseFirestore _adminFirestore;
 
   // Singleton Pattern
-  FirebaseAdminService._privateConstructor() {
-    _initialize();
-  }
+  FirebaseAdminService._privateConstructor();
   static final FirebaseAdminService instance =
       FirebaseAdminService._privateConstructor();
+
+  static Future<void> initialize() async {
+    await instance._initialize();
+  }
 
   Future<void> _initialize() async {
     final adminApp = Firebase.app('admin-app');
