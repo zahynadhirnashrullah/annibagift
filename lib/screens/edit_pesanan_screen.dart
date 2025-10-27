@@ -1,12 +1,10 @@
-// lib/screens/details/edit_pesanan_screen.dart
+// lib/screens/edit_pesanan_screen.dart
 
 import 'package:flutter/material.dart';
-// --- PERBAIKAN DI SINI ---
-import 'package:intl/intl.dart'; // Import intl untuk formatting
-import '../../models/models.dart';
-import '../../widgets/shared_widgets.dart';
-import '../../theme/app_theme.dart';
-// --- AKHIR PERBAIKAN ---
+import 'package:intl/intl.dart'; 
+import '../models/models.dart';
+import '../widgets/shared_widgets.dart';
+import '../theme/app_theme.dart';
 
 class EditPesananScreen extends StatefulWidget {
   final Pesanan pesanan;
@@ -38,12 +36,7 @@ class _EditPesananScreenState extends State<EditPesananScreen> {
     _alamatController.text = widget.pesanan.alamat;
     _noHpController.text = widget.pesanan.noHp;
     _keteranganController.text = widget.pesanan.keterangan;
-    
-    // --- PERBAIKAN DI SINI ---
-    // Tampilkan harga yang sudah diformat saat mengedit
     _hargaController.text = NumberFormat('#,###', 'id_ID').format(widget.pesanan.totalHarga);
-    // --- AKHIR PERBAIKAN ---
-
     _selectedPesananStatus = widget.pesanan.status;
   }
 
@@ -72,19 +65,20 @@ class _EditPesananScreenState extends State<EditPesananScreen> {
     }
 
     final updatedPesanan = Pesanan(
-      id: widget.pesanan.id,
+      id: widget.pesanan.id, // ID lama
       nama: _namaController.text,
       alamat: _alamatController.text,
       noHp: _noHpController.text,
-
-      // --- PERBAIKAN DI SINI ---
-      // Hapus titik '.' sebelum parsing
       totalHarga: double.tryParse(_hargaController.text.replaceAll('.', '')) ?? 0.0,
-      // --- AKHIR PERBAIKAN ---
-      
       keterangan: _keteranganController.text,
-      tanggalDibuat: widget.pesanan.tanggalDibuat,
+      tanggalDibuat: widget.pesanan.tanggalDibuat, // Tanggal dibuat tidak berubah
       status: _selectedPesananStatus ?? PesananStatus.proses,
+      
+      // --- PERUBAHAN PENTING DI SINI ---
+      // Memastikan data pemilik asli tidak berubah saat diedit
+      createdById: widget.pesanan.createdById,
+      createdByName: widget.pesanan.createdByName,
+      // --- AKHIR PERUBAHAN ---
     );
 
     widget.onConfirmEdit(widget.pesanan, updatedPesanan);
@@ -143,6 +137,7 @@ class _EditPesananScreenState extends State<EditPesananScreen> {
     );
   }
 
+  // ... (Widget _buildPesananStatusDropdown tidak berubah) ...
   Widget _buildPesananStatusDropdown() {
     return DropdownButtonFormField<PesananStatus>(
       initialValue: _selectedPesananStatus,

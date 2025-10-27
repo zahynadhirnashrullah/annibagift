@@ -10,10 +10,13 @@ import '../widgets/shared_widgets.dart';
 class DetailSaldoScreen extends StatefulWidget {
   final List<Transaksi> transactions;
   final List<Pengeluaran>
-      pengeluaranListAsli; // <-- Untuk mencari data asli
+      pengeluaranListAsli; 
   final Function(Pengeluaran) onAddPengeluaran;
   final Function(Pengeluaran, Pengeluaran) onEditPengeluaran;
   final Function(Pengeluaran) onDeletePengeluaran;
+  // --- 1. TAMBAHKAN CURRENT USER ---
+  final User currentUser;
+  // --- AKHIR TAMBAHAN ---
 
   const DetailSaldoScreen({
     super.key,
@@ -22,6 +25,9 @@ class DetailSaldoScreen extends StatefulWidget {
     required this.onAddPengeluaran,
     required this.onEditPengeluaran,
     required this.onDeletePengeluaran,
+    // --- 2. TAMBAHKAN DI KONSTRUKTOR ---
+    required this.currentUser,
+    // --- AKHIR TAMBAHAN ---
   });
 
   @override
@@ -29,7 +35,7 @@ class DetailSaldoScreen extends StatefulWidget {
 }
 
 class _DetailSaldoScreenState extends State<DetailSaldoScreen> {
-  String _filterType = 'Semua'; // 'Semua', 'Bulan Ini', 'Tahun Ini'
+  String _filterType = 'Semua'; 
   List<Transaksi> _filteredTransactions = [];
 
   @override
@@ -47,6 +53,7 @@ class _DetailSaldoScreenState extends State<DetailSaldoScreen> {
   }
 
   void _filterTransactions() {
+    // ... (Logika filter tidak berubah) ...
     final now = DateTime.now();
     setState(() {
       switch (_filterType) {
@@ -84,24 +91,20 @@ class _DetailSaldoScreenState extends State<DetailSaldoScreen> {
   }
 
   void _showPengeluaranDialog({Pengeluaran? pengeluaran}) {
-    // Variabel LOKAL (tidak pakai garis bawah '_')
     final formKey = GlobalKey<FormState>();
     final deskripsiController =
         TextEditingController(text: pengeluaran?.deskripsi);
     
-    // --- PERBAIKAN DI SINI (Opsional tapi disarankan) ---
-    // Tampilkan harga yang diformat di dialog edit
     final String hargaAwal = pengeluaran?.harga != null
         ? NumberFormat('#,###', 'id_ID').format(pengeluaran!.harga)
         : '';
     final hargaController = TextEditingController(text: hargaAwal);
-    // --- AKHIR PERBAIKAN ---
-
+    
     DateTime selectedDate = pengeluaran?.tanggal ?? DateTime.now();
 
     showDialog(
       context: context,
-      builder: (dialogContext) { // <-- PERBAIKAN: Memberi nama unik
+      builder: (dialogContext) { 
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
@@ -120,7 +123,7 @@ class _DetailSaldoScreenState extends State<DetailSaldoScreen> {
                     const SizedBox(height: 16),
                     buildTextField(
                       hargaController,
-                      'Harga', // <-- Label ini sekarang akan diformat oleh shared_widgets
+                      'Harga', 
                       Icons.price_change_outlined,
                       keyboardType: TextInputType.number,
                     ),
@@ -128,7 +131,7 @@ class _DetailSaldoScreenState extends State<DetailSaldoScreen> {
                     InkWell(
                       onTap: () async {
                         DateTime? picked = await showDatePicker(
-                          context: context, // Boleh pakai context dari StatefulBuilder
+                          context: context,
                           initialDate: selectedDate,
                           firstDate: DateTime(2023),
                           lastDate: DateTime(2030),
@@ -157,34 +160,36 @@ class _DetailSaldoScreenState extends State<DetailSaldoScreen> {
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(), // <-- Menggunakan dialogContext
+                  onPressed: () => Navigator.of(dialogContext).pop(),
                   child: const Text('Batal'),
                 ),
                 ElevatedButton(
                   onPressed: () {
                     if (formKey.currentState!.validate()) {
                       
-                      // --- PERBAIKAN DI SINI ---
-                      // Hapus titik sebelum parsing
                       final double hargaParsed = 
                           double.tryParse(hargaController.text.replaceAll('.', '')) ?? 0.0;
-                      // --- AKHIR PERBAIKAN ---
-
+                      
+                      // --- 3. PERUBAHAN PENTING DI SINI ---
                       final newPengeluaran = Pengeluaran(
-                        id: pengeluaran?.id,
+                        id: pengeluaran?.id, // Null jika baru, ada nilai jika edit
                         deskripsi: deskripsiController.text,
-                        // --- PERBAIKAN DI SINI ---
-                        harga: hargaParsed, // Gunakan nilai yang sudah bersih
-                        // --- AKHIR PERBAIKAN ---
+                        harga: hargaParsed,
                         tanggal: selectedDate,
+                        
+                        // Jika 'pengeluaran' ada (edit), gunakan ID & nama lamanya
+                        // Jika 'pengeluaran' null (baru), gunakan ID & nama user saat ini
+                        createdById: pengeluaran?.createdById ?? widget.currentUser.id,
+                        createdByName: pengeluaran?.createdByName ?? widget.currentUser.username,
                       );
+                      // --- AKHIR PERUBAHAN ---
 
                       if (pengeluaran == null) {
                         widget.onAddPengeluaran(newPengeluaran);
                       } else {
                         widget.onEditPengeluaran(pengeluaran, newPengeluaran);
                       }
-                      Navigator.of(dialogContext).pop(); // <-- Menggunakan dialogContext
+                      Navigator.of(dialogContext).pop();
                     }
                   },
                   child: const Text('Simpan'),
@@ -198,6 +203,22 @@ class _DetailSaldoScreenState extends State<DetailSaldoScreen> {
   }
 
   void _showDeleteConfirmDialog(Pengeluaran pengeluaran) {
+    // --- 4. PENGECEKAN HAK AKSES (OPSIONAL TAPI DISARANKAN) ---
+    // Hanya Admin atau pemilik data yang boleh menghapus
+    bool canDelete = widget.currentUser.role == Role.admin ||
+                     pengeluaran.createdById == widget.currentUser.id;
+
+    if (!canDelete) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Anda tidak memiliki izin untuk menghapus data ini."),
+          backgroundColor: AppColors.accentRed,
+        ),
+      );
+      return;
+    }
+    // --- AKHIR PENGECEKAN ---
+    
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -226,6 +247,7 @@ class _DetailSaldoScreenState extends State<DetailSaldoScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ... (Sisa build method tidak berubah) ...
     final filteredTotal = _calculateFilteredTotal();
 
     return Scaffold(
@@ -286,25 +308,29 @@ class _DetailSaldoScreenState extends State<DetailSaldoScreen> {
                     itemCount: _filteredTransactions.length,
                     itemBuilder: (context, index) {
                       final tx = _filteredTransactions[index];
+                      // --- 5. PENGECEKAN HAK AKSES EDIT (OPSIONAL) ---
+                      bool canEditOrDelete = widget.currentUser.role == Role.admin ||
+                                           (tx.tipe == TipeTransaksi.pengeluaran && 
+                                            tx.referensiId == _findPengeluaranById(tx.referensiId)?.createdById);
+                      
+                      // Cek data pengeluaran asli
+                      Pengeluaran? p = (tx.tipe == TipeTransaksi.pengeluaran) 
+                                       ? _findPengeluaranById(tx.referensiId) 
+                                       : null;
+                      
+                      // Hanya tampilkan tombol jika data pengeluaran ada
+                      // Dan user adalah Admin ATAU pemilik data
+                      bool showButtons = p != null && 
+                                        (widget.currentUser.role == Role.admin || 
+                                         p.createdById == widget.currentUser.id);
+                                         
                       return TransaksiListTile(
                         transaksi: tx,
-                        onEdit: tx.tipe == TipeTransaksi.pengeluaran
-                            ? () {
-                                Pengeluaran? p =
-                                    _findPengeluaranById(tx.referensiId);
-                                if (p != null) {
-                                  _showPengeluaranDialog(pengeluaran: p);
-                                }
-                              }
+                        onEdit: showButtons
+                            ? () => _showPengeluaranDialog(pengeluaran: p)
                             : null,
-                        onDelete: tx.tipe == TipeTransaksi.pengeluaran
-                            ? () {
-                                Pengeluaran? p =
-                                    _findPengeluaranById(tx.referensiId);
-                                if (p != null) {
-                                  _showDeleteConfirmDialog(p);
-                                }
-                              }
+                        onDelete: showButtons
+                            ? () => _showDeleteConfirmDialog(p)
                             : null,
                       );
                     },
@@ -322,6 +348,7 @@ class _DetailSaldoScreenState extends State<DetailSaldoScreen> {
   }
 }
 
+// ... (Widget TransaksiListTile tidak berubah) ...
 class TransaksiListTile extends StatelessWidget {
   final Transaksi transaksi;
   final VoidCallback? onEdit;
@@ -343,7 +370,6 @@ class TransaksiListTile extends StatelessWidget {
         ? Icons.arrow_upward_rounded
         : Icons.arrow_downward_rounded;
 
-    // Format string yang benar
     final formattedAmount =
         "Rp ${NumberFormat.decimalPattern('id_ID').format(transaksi.jumlah.abs())}";
     final prefix = isIncome ? '+' : '-';
@@ -370,7 +396,7 @@ class TransaksiListTile extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            "$prefix$formattedAmount", // Menggunakan format yang benar
+            "$prefix$formattedAmount", 
             style: AppTextStyles.subtitle.copyWith(color: amountColor),
           ),
           if (onEdit != null)
