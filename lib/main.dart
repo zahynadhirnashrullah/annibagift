@@ -1,6 +1,5 @@
 // lib/main.dart
 
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -14,14 +13,15 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // ✅ Inisialisasi Firebase default (aman untuk semua platform)
-  if (kIsWeb) {
-    // Untuk Web: wajib manual pakai options
+  try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-  } else {
-    // Untuk Android/iOS: otomatis dari google-services.json
-    await Firebase.initializeApp();
+  } catch (e) {
+    // Abaikan error duplicate app (misalnya saat hot reload)
+    if (!e.toString().contains('duplicate-app')) {
+      rethrow;
+    }
   }
 
   // ✅ Inisialisasi secondary admin app (opsional, dan dicegah error duplikat)
