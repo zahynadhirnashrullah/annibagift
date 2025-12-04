@@ -26,16 +26,20 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   @override
   void initState() {
     super.initState();
-  // Use RTDB stream
-  _usersStream = _adminService.getUsersStreamRTDB();
+    // Menggunakan stream dari Realtime Database sesuai kode asli
+    _usersStream = _adminService.getUsersStreamRTDB();
   }
 
   void _showUserFormDialog({User? user}) {
     final bool isEditing = user != null;
     final formKey = GlobalKey<FormState>();
+    
+    // Controller untuk input data
     final emailController = TextEditingController(text: user?.email ?? '');
     final usernameController = TextEditingController(text: user?.username ?? '');
     final passwordController = TextEditingController();
+    final confirmPasswordController = TextEditingController(); // Controller baru untuk konfirmasi
+
     Role selectedRole = user?.role ?? Role.karyawan;
 
     showModalBottomSheet(
@@ -44,6 +48,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       backgroundColor: Colors.transparent,
       builder: (BuildContext modalContext) {
         final sheetContext = modalContext;
+        // Mengatur padding agar tidak tertutup keyboard
         return Padding(
           padding: EdgeInsets.only(bottom: MediaQuery.of(sheetContext).viewInsets.bottom),
           child: Container(
@@ -58,8 +63,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // --- JUDUL ---
                   Text(isEditing ? 'Edit Pengguna' : 'Tambah Pengguna Baru', style: AppTextStyles.heading2),
                   const SizedBox(height: 24),
+                  
+                  // --- INPUT EMAIL ---
                   if (!isEditing) ...[
                     buildTextField(
                       emailController,
@@ -83,9 +91,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       emailController,
                       'Email (tidak dapat diubah)',
                       Icons.email_outlined,
-                      readOnly: true, // <-- PERBAIKAN: Menggunakan parameter readOnly
+                      readOnly: true, 
                     ),
                   if (isEditing) const SizedBox(height: 16),
+                  
+                  // --- INPUT USERNAME ---
                   buildTextField(
                     usernameController, 
                     'Username', 
@@ -97,11 +107,40 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                         return null;
                       },
                   ),
+                  const SizedBox(height: 24),
+
+                  // --- INFO BOX: INSTRUKSI PASSWORD ---
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withAlpha(25), // Latar belakang transparan tipis
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.primary.withAlpha(80)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.info_outline_rounded, color: AppColors.primary, size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            isEditing 
+                                ? "Jika ingin mengubah password, gunakan kombinasi huruf besar, kecil, angka, dan simbol (!@#\$) agar lebih aman."
+                                : "Gunakan kombinasi huruf besar, kecil, angka, dan simbol (!@#\$) untuk password yang kuat.",
+                            style: AppTextStyles.body.copyWith(fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 16),
+
+                  // --- INPUT PASSWORD & KONFIRMASI (LOGIKA EDIT vs BARU) ---
                   if (isEditing) ...[
+                    // Mode Edit: Password Opsional
                     buildTextField(
                       passwordController,
-                      'Reset Password (kosongkan jika tidak diubah)',
+                      'Password Baru (kosongkan jika tidak diubah)',
                       Icons.lock_outline,
                       isObscure: true,
                       validator: (value) {
@@ -112,9 +151,25 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       },
                     ),
                     const SizedBox(height: 16),
+                    buildTextField(
+                      confirmPasswordController,
+                      'Konfirmasi Password Baru',
+                      Icons.lock_reset_rounded,
+                      isObscure: true,
+                      validator: (value) {
+                        // Validasi konfirmasi hanya jika password utama diisi
+                        if (passwordController.text.isNotEmpty) {
+                          if (value == null || value.isEmpty) return 'Konfirmasi password harus diisi';
+                          if (value != passwordController.text) return 'Password tidak cocok';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
                   ],
-                  const SizedBox(height: 16),
+                  
                   if (!isEditing) ...[
+                    // Mode Baru: Password Wajib
                     buildTextField(
                       passwordController, 
                       'Password', 
@@ -131,9 +186,27 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       },
                     ),
                     const SizedBox(height: 16),
+                    buildTextField(
+                      confirmPasswordController, 
+                      'Konfirmasi Password', 
+                      Icons.check_circle_outline_rounded, 
+                      isObscure: true,
+                      validator: (value) { 
+                        if (value == null || value.isEmpty) {
+                          return 'Konfirmasi password harus diisi';
+                        }
+                        if (value != passwordController.text) {
+                           return 'Password tidak cocok';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
                   ],
+
+                  // --- PILIHAN ROLE ---
                   DropdownButtonFormField<Role>(
-                    initialValue: selectedRole, // <-- PERBAIKAN: Ganti value ke initialValue
+                    initialValue: selectedRole,
                     items: Role.values.map((role) => DropdownMenuItem<Role>(
                           value: role,
                           child: Text(role.name[0].toUpperCase() + role.name.substring(1)),
@@ -150,6 +223,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
+
+                  // --- TOMBOL SIMPAN ---
                   buildGradientButton(
                     isEditing ? 'Simpan Perubahan' : 'Tambahkan Pengguna',
                     Icons.save_rounded,
@@ -159,10 +234,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
                       try {
                         if (isEditing) {
-                          final User editingUser = user; // promote to non-null local variable
+                          final User editingUser = user; 
                           await _adminService.updateUser(editingUser.id, username: usernameController.text, role: selectedRole);
 
-                          // If a reset password was provided, update the stored passwordHash
+                          // Jika password diisi, update hash password
                           if (passwordController.text.isNotEmpty) {
                             final ok = await _adminService.updateUserPasswordHash(editingUser.id, passwordController.text);
                             if (ok) {
@@ -178,6 +253,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                           Navigator.of(context).pop();
                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pengguna berhasil diperbarui'), backgroundColor: AppColors.accentGreen));
                         } else {
+                          // Buat user baru
                           final created = await _adminService.createUser(emailController.text, passwordController.text, usernameController.text, selectedRole);
 
                           if (!mounted) return;
@@ -222,7 +298,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) { 
-             return Center(child: Text('Error: ${snapshot.error.toString()}')); // Tampilkan error
+             return Center(child: Text('Error: ${snapshot.error.toString()}')); 
           }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const EmptyStateWidget(
