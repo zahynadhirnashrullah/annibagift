@@ -13,7 +13,7 @@ class DashboardScreen extends StatelessWidget {
   final double totalSaldo;
   final VoidCallback onNavigateToSewa;
   final VoidCallback onNavigateToPesanan;
-  final VoidCallback onNavigateToStok; // Ini akan kita gunakan untuk Laporan Admin
+  final VoidCallback onNavigateToStok;
   final VoidCallback onNavigateToDetailSaldo;
   final User currentUser;
   final VoidCallback onLogout;
@@ -43,7 +43,6 @@ class DashboardScreen extends StatelessWidget {
       return 'Selamat Malam';
     }
 
-    // Tentukan apakah admin
     final bool isAdmin = currentUser.role == Role.admin;
 
     return Scaffold(
@@ -166,7 +165,8 @@ class DashboardScreen extends StatelessWidget {
                 label: 'Sewa Aktif',
                 value: sewaCount.toString(),
                 color: AppColors.accentPink,
-                // --- PERUBAHAN DI SINI ---
+                // Keduanya akan menggunakan callback yang di-pass dari main_screen
+                // Di main_screen, keduanya sudah kita arahkan ke index halaman Data (Index 2)
                 onTap: isAdmin ? onNavigateToStok : onNavigateToSewa,
               )),
               const SizedBox(width: 16),
@@ -176,12 +176,10 @@ class DashboardScreen extends StatelessWidget {
                 label: 'Total Pesanan',
                 value: pesananCount.toString(),
                 color: AppColors.accentGreen,
-                // --- PERUBAHAN DI SINI ---
                 onTap: isAdmin ? onNavigateToStok : onNavigateToPesanan,
               )),
             ],
           ),
-          // --- AKHIR PERUBAHAN ---
           const SizedBox(height: 24),
           const SizedBox(height: 24),
           const Text('Aktivitas Terbaru', style: AppTextStyles.heading2),
