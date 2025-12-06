@@ -32,6 +32,10 @@ class FirebaseAdminService {
     _adminFirestore = FirebaseFirestore.instanceFor(app: adminApp);
   }
 
+  // --- GETTERS FOR DATABASE ACCESS ---
+  FirebaseDatabase getDatabase() => _adminDatabase;
+  FirebaseFirestore getFirestore() => _adminFirestore;
+
   // --- FUNGSI LOGIN/LOGOUT ADMIN ---
   Future<void> loginAsAdmin(String email, String password) async {
     try {
@@ -498,5 +502,197 @@ class FirebaseAdminService {
       debugPrint('Error looking up auth user: $e');
     }
     return null;
+  }
+
+  // --- SEWA OPERATIONS (Realtime Database) ---
+  Future<void> addSewaToRTDB(Sewa sewa) async {
+    try {
+      final ref = _adminDatabase.ref('sewa/${sewa.id}');
+      await ref.set({
+        'id': sewa.id,
+        'nama': sewa.nama,
+        'alamat': sewa.alamat,
+        'noHp': sewa.noHp,
+        'tanggal': sewa.tanggal.toIso8601String(),
+        'tanggalDibuat': sewa.tanggalDibuat.toIso8601String(),
+        'totalHarga': sewa.totalHarga,
+        'keterangan': sewa.keterangan,
+        'durasi': sewa.durasi,
+        'jaminan': sewa.jaminan,
+        'status': sewa.status.toString(),
+        'createdById': sewa.createdById,
+        'createdByName': sewa.createdByName,
+        'timestamp': DateTime.now().toUtc().toIso8601String(),
+      });
+      debugPrint('Sewa added to RTDB: ${sewa.id}');
+    } catch (e) {
+      debugPrint('Error adding sewa to RTDB: $e');
+    }
+  }
+
+  Future<void> updateSewaInRTDB(Sewa sewa) async {
+    try {
+      final ref = _adminDatabase.ref('sewa/${sewa.id}');
+      await ref.update({
+        'nama': sewa.nama,
+        'alamat': sewa.alamat,
+        'noHp': sewa.noHp,
+        'tanggal': sewa.tanggal.toIso8601String(),
+        'totalHarga': sewa.totalHarga,
+        'keterangan': sewa.keterangan,
+        'durasi': sewa.durasi,
+        'jaminan': sewa.jaminan,
+        'status': sewa.status.toString(),
+        'updatedAt': DateTime.now().toUtc().toIso8601String(),
+      });
+      debugPrint('Sewa updated in RTDB: ${sewa.id}');
+    } catch (e) {
+      debugPrint('Error updating sewa in RTDB: $e');
+    }
+  }
+
+  Future<void> deleteSewaFromRTDB(String sewaId) async {
+    try {
+      final ref = _adminDatabase.ref('sewa/$sewaId');
+      await ref.remove();
+      debugPrint('Sewa deleted from RTDB: $sewaId');
+    } catch (e) {
+      debugPrint('Error deleting sewa from RTDB: $e');
+    }
+  }
+
+  // --- PESANAN OPERATIONS (Realtime Database) ---
+  Future<void> addPesananToRTDB(Pesanan pesanan) async {
+    try {
+      final ref = _adminDatabase.ref('pesanan/${pesanan.id}');
+      await ref.set({
+        'id': pesanan.id,
+        'nama': pesanan.nama,
+        'alamat': pesanan.alamat,
+        'noHp': pesanan.noHp,
+        'tanggalDibuat': pesanan.tanggalDibuat.toIso8601String(),
+        'totalHarga': pesanan.totalHarga,
+        'keterangan': pesanan.keterangan,
+        'status': pesanan.status.toString(),
+        'createdById': pesanan.createdById,
+        'createdByName': pesanan.createdByName,
+        'timestamp': DateTime.now().toUtc().toIso8601String(),
+      });
+      debugPrint('Pesanan added to RTDB: ${pesanan.id}');
+    } catch (e) {
+      debugPrint('Error adding pesanan to RTDB: $e');
+    }
+  }
+
+  Future<void> updatePesananInRTDB(Pesanan pesanan) async {
+    try {
+      final ref = _adminDatabase.ref('pesanan/${pesanan.id}');
+      await ref.update({
+        'nama': pesanan.nama,
+        'alamat': pesanan.alamat,
+        'noHp': pesanan.noHp,
+        'totalHarga': pesanan.totalHarga,
+        'keterangan': pesanan.keterangan,
+        'status': pesanan.status.toString(),
+        'updatedAt': DateTime.now().toUtc().toIso8601String(),
+      });
+      debugPrint('Pesanan updated in RTDB: ${pesanan.id}');
+    } catch (e) {
+      debugPrint('Error updating pesanan in RTDB: $e');
+    }
+  }
+
+  Future<void> deletePesananFromRTDB(String pesananId) async {
+    try {
+      final ref = _adminDatabase.ref('pesanan/$pesananId');
+      await ref.remove();
+      debugPrint('Pesanan deleted from RTDB: $pesananId');
+    } catch (e) {
+      debugPrint('Error deleting pesanan from RTDB: $e');
+    }
+  }
+
+  // READ SEWA STREAM FROM RTDB
+  Stream<List<Sewa>> getSewaStreamRTDB() {
+    final ref = _adminDatabase.ref('sewa');
+    return ref.onValue.map((event) {
+      final value = event.snapshot.value;
+      if (value is Map) {
+        final list = <Sewa>[];
+        for (final entry in value.values) {
+          if (entry is Map) {
+            final map = Map<String, dynamic>.from(entry);
+            // Parse dates saved as ISO strings in RTDB
+            DateTime tanggal = DateTime.now();
+            DateTime tanggalDibuat = DateTime.now();
+            try {
+              if (map['tanggal'] is String) tanggal = DateTime.parse(map['tanggal']);
+              if (map['tanggalDibuat'] is String) tanggalDibuat = DateTime.parse(map['tanggalDibuat']);
+            } catch (_) {}
+
+            String statusStr = map['status'] ?? 'proses';
+            if (statusStr.contains('.')) statusStr = statusStr.split('.').last;
+            final status = SewaStatus.values.firstWhere((e) => e.name == statusStr, orElse: () => SewaStatus.proses);
+
+            list.add(Sewa(
+              id: map['id'],
+              nama: map['nama'] ?? '',
+              alamat: map['alamat'] ?? '',
+              noHp: map['noHp'] ?? '',
+              tanggal: tanggal,
+              tanggalDibuat: tanggalDibuat,
+              totalHarga: (map['totalHarga'] is num) ? (map['totalHarga'] as num).toDouble() : 0.0,
+              keterangan: map['keterangan'] ?? '',
+              durasi: (map['durasi'] is int) ? map['durasi'] as int : int.tryParse(map['durasi']?.toString() ?? '') ?? 0,
+              jaminan: map['jaminan'] ?? '',
+              status: status,
+              createdById: map['createdById'] ?? 'admin_legacy',
+              createdByName: map['createdByName'] ?? 'Data Lama',
+            ));
+          }
+        }
+        return list;
+      }
+      return <Sewa>[];
+    });
+  }
+
+  // READ PESANAN STREAM FROM RTDB
+  Stream<List<Pesanan>> getPesananStreamRTDB() {
+    final ref = _adminDatabase.ref('pesanan');
+    return ref.onValue.map((event) {
+      final value = event.snapshot.value;
+      if (value is Map) {
+        final list = <Pesanan>[];
+        for (final entry in value.values) {
+          if (entry is Map) {
+            final map = Map<String, dynamic>.from(entry);
+            DateTime tanggalDibuat = DateTime.now();
+            try {
+              if (map['tanggalDibuat'] is String) tanggalDibuat = DateTime.parse(map['tanggalDibuat']);
+            } catch (_) {}
+
+            String statusStr = map['status'] ?? 'proses';
+            if (statusStr.contains('.')) statusStr = statusStr.split('.').last;
+            final status = PesananStatus.values.firstWhere((e) => e.name == statusStr, orElse: () => PesananStatus.proses);
+
+            list.add(Pesanan(
+              id: map['id'],
+              nama: map['nama'] ?? '',
+              alamat: map['alamat'] ?? '',
+              noHp: map['noHp'] ?? '',
+              totalHarga: (map['totalHarga'] is num) ? (map['totalHarga'] as num).toDouble() : 0.0,
+              keterangan: map['keterangan'] ?? '',
+              tanggalDibuat: tanggalDibuat,
+              status: status,
+              createdById: map['createdById'] ?? 'admin_legacy',
+              createdByName: map['createdByName'] ?? 'Data Lama',
+            ));
+          }
+        }
+        return list;
+      }
+      return <Pesanan>[];
+    });
   }
 }
