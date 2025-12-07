@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "36004632059",
+    "firebase_url": "https://anniba-gift-default-rtdb.firebaseio.com",
     "project_id": "anniba-gift",
     "storage_bucket": "anniba-gift.firebasestorage.app"
   },

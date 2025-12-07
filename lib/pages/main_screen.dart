@@ -1,19 +1,18 @@
 // lib/pages/main_screen.dart
 
-import 'dart:async'; // <-- 1. IMPORT ASYNC
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; 
-import 'package:connectivity_plus/connectivity_plus.dart'; // <-- 2. IMPORT CONNECTIVITY
+import 'package:connectivity_plus/connectivity_plus.dart'; 
 import '../models/models.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import '../services/firebase_admin_service.dart';
 
-// ... (import halaman lainnya) ...
 import 'dashboard.dart';
 import 'pencatatan.dart';
-import 'sewa.dart';
-import 'pemesanan.dart';
+// Import halaman baru
+import 'transaksi_list_screen.dart'; 
 import 'user_management_screen.dart';
 import 'login_screen.dart';
 import 'laporan_screen.dart';
@@ -34,10 +33,8 @@ class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
   bool _isLoading = true; 
 
-  // --- 3. TAMBAHKAN STATE KONEKSI ---
   late StreamSubscription<List<ConnectivityResult>> _connectivitySubscription;
   bool _isOffline = false;
-  // --- AKHIR TAMBAHAN ---
 
   double _totalSaldo = 0.0;
   List<Sewa> sewaList = [];
@@ -46,7 +43,6 @@ class _MainScreenState extends State<MainScreen> {
   List<User> employeeList = []; 
   List<Transaksi> _transaksiList = [];
 
-  // ... (stokList tidak berubah) ...
   final List<StokItem> stokList = [
     StokItem(id: '1', nama: 'Kotak Kado Besar', jumlah: 15),
     StokItem(id: '2', nama: 'Pita Satin Merah (rol)', jumlah: 30),
@@ -68,7 +64,6 @@ class _MainScreenState extends State<MainScreen> {
     StokItem(id: '18', nama: 'Bloom Box', jumlah: 7),
   ];
   
-  // ... (Referensi collection tidak berubah) ...
   final CollectionReference sewaCollection =
       FirebaseFirestore.instance.collection('sewa');
   final CollectionReference pesananCollection =
@@ -85,15 +80,12 @@ class _MainScreenState extends State<MainScreen> {
     _selectedIndex = 0;
     _loadAllDataFromFirestore();
 
-    // --- 4. TAMBAHKAN LISTENER KONEKSI ---
     _checkInitialConnectivity();
     _connectivitySubscription = Connectivity()
         .onConnectivityChanged
         .listen(_updateConnectionStatus);
-    // --- AKHIR TAMBAHAN ---
   }
   
-  // --- 5. TAMBAHKAN FUNGSI HELPER KONEKSI ---
   Future<void> _checkInitialConnectivity() async {
     final result = await Connectivity().checkConnectivity();
     _updateConnectionStatus(result);
@@ -104,18 +96,18 @@ class _MainScreenState extends State<MainScreen> {
       _isOffline = result.contains(ConnectivityResult.none);
     });
   }
-  // --- AKHIR TAMBAHAN ---
 
   @override
   void dispose() {
-    // --- 6. HENTIKAN LISTENER ---
     _connectivitySubscription.cancel();
-    // --- AKHIR TAMBAHAN ---
     super.dispose();
   }
   
-  // ... (SEMUA FUNGSI LOGIKA DATA ANDA: _loadAllData, _addSewa, _deleteSewa, _editSewa, _addPesanan, _deletePesanan, _editPesanan, _addPengeluaran, _deletePengeluaran, _editPengeluaran, _rebuildTransactionList, _calculateTotalSaldo ... TIDAK BERUBAH) ...
-  
+  // ... (FUNGSI LOGIKA CRUD TIDAK BERUBAH) ...
+  // (Pastikan fungsi _loadAllDataFromFirestore, _addSewa, _deleteSewa, _editSewa, dll tetap ada di sini)
+  // SAYA HANYA MENYALIN BAGIAN YANG PERLU DIUBAH DI BAWAH INI UNTUK HEMAT TEMPAT
+  // TETAPI ANDA HARUS TETAP MEMILIKI FUNGSI-FUNGSI TERSEBUT DI DALAM KELAS INI
+
   Future<void> _loadAllDataFromFirestore() async {
     try {
       final bool isAdmin = widget.currentUser.role == Role.admin;
@@ -340,7 +332,7 @@ class _MainScreenState extends State<MainScreen> {
       debugPrint("Error editing pesanan: $e");
     }
   }
-  
+
   void _addPengeluaran(Pengeluaran data) async {
     try {
       await pengeluaranCollection.doc(data.id).set(data.toMap());
@@ -455,11 +447,9 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
   
-  // --- 7. TAMBAHKAN WIDGET BANNER ---
   Widget _buildOfflineBanner() {
     return Container(
       width: double.infinity,
-      // Gunakan warna yang tidak terlalu mengganggu, misal kuning
       color: Colors.amber.shade700,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: const Text(
@@ -469,7 +459,6 @@ class _MainScreenState extends State<MainScreen> {
       ),
     );
   }
-  // --- AKHIR TAMBAHAN ---
 
   @override
   Widget build(BuildContext context) {
@@ -486,16 +475,17 @@ class _MainScreenState extends State<MainScreen> {
       );
     }
     
-    // ... (Logika pembuatan 'pages' dan 'navItems' tidak berubah) ...
+    // 1. DASHBOARD (INDEX 0)
     pages.add(
       DashboardScreen(
         sewaCount: sewaList.length,
         pesananCount: pesananList.length,
         stokCount: stokList.length,
         totalSaldo: _totalSaldo,
+        // ARAHKAN KEDUA TOMBOL KE INDEX 2 (Halaman Data Transaksi)
         onNavigateToSewa: () => _onItemTapped(2), 
-        onNavigateToPesanan: () => _onItemTapped(3),
-        onNavigateToStok: () => _onItemTapped(1), 
+        onNavigateToPesanan: () => _onItemTapped(2),
+        onNavigateToStok: () => _onItemTapped(1), // Tidak ada perubahan
         onNavigateToDetailSaldo: _navigateToDetailSaldo,
         currentUser: widget.currentUser,
         onLogout: _logout,
@@ -509,12 +499,15 @@ class _MainScreenState extends State<MainScreen> {
     );
 
     if (isAdmin) {
+      // ADMIN VIEW
       pages.addAll([
+        // Index 1: Laporan
         LaporanScreen(
           sewaList: sewaList,
           pesananList: pesananList,
           employees: employeeList,
         ),
+        // Index 2: Users
         UserManagementScreen(currentUser: widget.currentUser),
       ]);
       navItems.addAll([
@@ -528,22 +521,25 @@ class _MainScreenState extends State<MainScreen> {
         ),
       ]);
     } else {
+      // KARYAWAN VIEW
       pages.addAll([
+        // Index 1: Pencatatan (Input)
         PencatatanScreen(
           onConfirmSewa: _addSewa,
           onConfirmPesanan: _addPesanan,
-          onNavigateAfterSubmit: (int pageIndex) => _onItemTapped(pageIndex),
+          // Setelah input, arahkan ke Index 2 (Halaman Data)
+          onNavigateAfterSubmit: (int pageIndex) => _onItemTapped(2), 
           currentUser: widget.currentUser,
         ),
-        SewaScreen(
+        
+        // Index 2: DATA TRANSAKSI (GABUNGAN SEWA & PESANAN)
+        TransaksiListScreen(
           sewaList: sewaList,
-          onDelete: _deleteSewa,
-          onEdit: _navigateToEditSewa,
-        ),
-        PemesananScreen(
+          onDeleteSewa: _deleteSewa,
+          onEditSewa: _navigateToEditSewa,
           pesananList: pesananList,
-          onDelete: _deletePesanan,
-          onEdit: _navigateToEditPesanan,
+          onDeletePesanan: _deletePesanan,
+          onEditPesanan: _navigateToEditPesanan,
         ),
       ]);
       navItems.addAll([
@@ -551,29 +547,23 @@ class _MainScreenState extends State<MainScreen> {
           icon: Icon(Icons.edit_note_rounded),
           label: "Pencatatan",
         ),
+        // MENU GABUNGAN
         const BottomNavigationBarItem(
-          icon: Icon(Icons.shopping_cart_rounded),
-          label: "Sewa",
-        ),
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.list_alt_rounded),
-          label: "Pesanan",
+          icon: Icon(Icons.receipt_long_rounded), // Ikon yang merepresentasikan daftar
+          label: "Data",
         ),
       ]);
     }
     
-    // --- 8. MODIFIKASI BODY SCAFFOLD ---
     return Scaffold(
-      body: Column( // Ubah body menjadi Column
+      body: Column( 
         children: [
-          // Banner akan muncul di sini jika offline
           if (_isOffline)
-            SafeArea( // Gunakan SafeArea agar banner tidak tertimpa status bar
+            SafeArea( 
               bottom: false,
               child: _buildOfflineBanner(),
             ),
           
-          // Halaman utama Anda
           Expanded(
             child: IndexedStack(
               index: _selectedIndex, 
@@ -582,7 +572,6 @@ class _MainScreenState extends State<MainScreen> {
           ),
         ],
       ),
-      // --- AKHIR PERUBAHAN ---
       bottomNavigationBar: SafeArea(
         bottom: true, 
         top: false,
