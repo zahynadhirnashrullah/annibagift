@@ -42,6 +42,8 @@ class _MainScreenState extends State<MainScreen> {
   List<Pengeluaran> pengeluaranList = [];
   List<User> employeeList = []; 
   List<Transaksi> _transaksiList = [];
+  StreamSubscription<List<Sewa>>? _sewaStreamSub;
+  StreamSubscription<List<Pesanan>>? _pesananStreamSub;
 
   final List<StokItem> stokList = [
     StokItem(id: '1', nama: 'Kotak Kado Besar', jumlah: 15),
@@ -79,6 +81,7 @@ class _MainScreenState extends State<MainScreen> {
     super.initState();
     _selectedIndex = 0;
     _loadAllDataFromFirestore();
+    _startRTDBListeners();
 
     _checkInitialConnectivity();
     _connectivitySubscription = Connectivity()
@@ -99,8 +102,40 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   void dispose() {
+    _sewaStreamSub?.cancel();
+    _pesananStreamSub?.cancel();
     _connectivitySubscription.cancel();
     super.dispose();
+  }
+
+  void _startRTDBListeners() {
+    try {
+      _sewaStreamSub = FirebaseAdminService.instance.getSewaStreamRTDB().listen((remoteSewa) {
+        final bool isAdmin = widget.currentUser.role == Role.admin;
+        final filtered = isAdmin ? remoteSewa : remoteSewa.where((s) => s.createdById == widget.currentUser.id).toList();
+        setState(() {
+          sewaList = filtered;
+          _rebuildTransactionList();
+        });
+        debugPrint('RTDB sewa stream update: ${sewaList.length} items (isAdmin: $isAdmin)');
+      }, onError: (e) {
+        debugPrint('Error in sewa RTDB stream: $e');
+      });
+
+      _pesananStreamSub = FirebaseAdminService.instance.getPesananStreamRTDB().listen((remotePesanan) {
+        final bool isAdmin = widget.currentUser.role == Role.admin;
+        final filtered = isAdmin ? remotePesanan : remotePesanan.where((p) => p.createdById == widget.currentUser.id).toList();
+        setState(() {
+          pesananList = filtered;
+          _rebuildTransactionList();
+        });
+        debugPrint('RTDB pesanan stream update: ${pesananList.length} items (isAdmin: $isAdmin)');
+      }, onError: (e) {
+        debugPrint('Error in pesanan RTDB stream: $e');
+      });
+    } catch (e) {
+      debugPrint('Failed to start RTDB listeners: $e');
+    }
   }
   
   // ... (FUNGSI LOGIKA CRUD TIDAK BERUBAH) ...
@@ -156,6 +191,18 @@ class _MainScreenState extends State<MainScreen> {
         _rebuildTransactionList(); 
         _isLoading = false; 
       });
+          debugPrint("Loaded ${loadedSewa.length} sewa documents (isAdmin: $isAdmin, userId: ${widget.currentUser.id})");
+          debugPrint("Loaded ${loadedPesanan.length} pesanan documents (isAdmin: $isAdmin, userId: ${widget.currentUser.id})");
+          debugPrint("Loaded ${loadedPengeluaran.length} pengeluaran documents");
+
+          setState(() {
+            sewaList = loadedSewa;
+            pesananList = loadedPesanan;
+            pengeluaranList = loadedPengeluaran;
+            employeeList = loadedEmployees;
+            _rebuildTransactionList(); 
+            _isLoading = false; 
+          });
     } catch (e) {
       debugPrint("Error loading data: $e");
       setState(() {
@@ -184,9 +231,18 @@ class _MainScreenState extends State<MainScreen> {
         _transaksiList.fold(0.0, (previous, item) => previous + item.jumlah);
   }
 
+  
   void _addSewa(Sewa data) async {
     try {
       await sewaCollection.doc(data.id).set(data.toMap());
+      debugPrint("✓ Sewa saved to Firestore: ${data.id}");
+      // Also save to Realtime Database
+      try {
+        await FirebaseAdminService.instance.addSewaToRTDB(data);
+        debugPrint("✓ Sewa saved to RTDB: ${data.id}");
+      } catch (e) {
+        debugPrint("Warning: Failed to save sewa to RTDB: $e");
+      }
       setState(() {
         sewaList.add(data);
         _rebuildTransactionList();
@@ -215,6 +271,12 @@ class _MainScreenState extends State<MainScreen> {
               Navigator.of(ctx).pop();
               try {
                 await sewaCollection.doc(data.id).delete();
+                // Also delete from RTDB
+                try {
+                  await FirebaseAdminService.instance.deleteSewaFromRTDB(data.id);
+                } catch (e) {
+                  debugPrint('Warning: failed to delete sewa from RTDB: $e');
+                }
                 setState(() {
                   sewaList.removeWhere((item) => item.id == data.id);
                   _rebuildTransactionList();
@@ -248,6 +310,12 @@ class _MainScreenState extends State<MainScreen> {
       );
 
       await sewaCollection.doc(finalData.id).update(finalData.toMap());
+        // Also update in Realtime Database
+        try {
+          await FirebaseAdminService.instance.updateSewaInRTDB(finalData);
+        } catch (e) {
+          debugPrint('Warning: failed to update sewa in RTDB: $e');
+        }
       setState(() {
         final index = sewaList.indexWhere((item) => item.id == oldData.id);
         if (index != -1) {
@@ -263,6 +331,13 @@ class _MainScreenState extends State<MainScreen> {
   void _addPesanan(Pesanan data) async {
     try {
       await pesananCollection.doc(data.id).set(data.toMap());
+      debugPrint("✓ Pesanan saved to Firestore: ${data.id}");
+      try {
+        await FirebaseAdminService.instance.addPesananToRTDB(data);
+        debugPrint("✓ Pesanan saved to RTDB: ${data.id}");
+      } catch (e) {
+        debugPrint("Warning: Failed to save pesanan to RTDB: $e");
+      }
       setState(() {
         pesananList.add(data);
         _rebuildTransactionList();
@@ -291,6 +366,12 @@ class _MainScreenState extends State<MainScreen> {
               Navigator.of(ctx).pop();
               try {
                 await pesananCollection.doc(data.id).delete();
+                // Also delete from RTDB
+                try {
+                  await FirebaseAdminService.instance.deletePesananFromRTDB(data.id);
+                } catch (e) {
+                  debugPrint('Warning: failed to delete pesanan from RTDB: $e');
+                }
                 setState(() {
                   pesananList.removeWhere((item) => item.id == data.id);
                   _rebuildTransactionList();
@@ -321,6 +402,12 @@ class _MainScreenState extends State<MainScreen> {
       );
       
       await pesananCollection.doc(finalData.id).update(finalData.toMap());
+      // Also update in RTDB
+      try {
+        await FirebaseAdminService.instance.updatePesananInRTDB(finalData);
+      } catch (e) {
+        debugPrint('Warning: failed to update pesanan in RTDB: $e');
+      }
       setState(() {
         final index = pesananList.indexWhere((item) => item.id == oldData.id);
         if (index != -1) {
