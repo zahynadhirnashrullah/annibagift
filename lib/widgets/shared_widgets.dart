@@ -186,25 +186,37 @@ class SewaListTile extends StatelessWidget {
                 Expanded(
                   child: Text(item.nama, style: AppTextStyles.subtitle),
                 ),
-                
-                // --- PERUBAHAN DI SINI (CEK NULL) ---
-                if (onEdit != null)
-                  IconButton(
-                    icon: const Icon(
-                      Icons.edit_outlined,
-                      color: AppColors.accentBlue,
-                    ),
-                    onPressed: onEdit,
-                  ),
-                if (onDelete != null)
-                  IconButton(
-                    icon: const Icon(
-                      Icons.delete_outline_rounded,
-                      color: AppColors.accentRed,
-                    ),
-                    onPressed: onDelete,
-                  ),
-                // --- AKHIR PERUBAHAN ---
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert),
+                  onSelected: (value) {
+                    if (value == 'edit' && onEdit != null) onEdit!();
+                    if (value == 'delete' && onDelete != null) onDelete!();
+                  },
+                  itemBuilder: (BuildContext context) => [
+                    if (onEdit != null)
+                      const PopupMenuItem<String>(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit, color: AppColors.accentBlue, size: 20),
+                            SizedBox(width: 12),
+                            Text('Edit'),
+                          ],
+                        ),
+                      ),
+                    if (onDelete != null)
+                      const PopupMenuItem<String>(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete, color: AppColors.accentRed, size: 20),
+                            SizedBox(width: 12),
+                            Text('Delete'),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -226,14 +238,9 @@ class SewaListTile extends StatelessWidget {
               icon: Icons.calendar_today_outlined,
               text: "Kembali: ${DateFormat('d MMM yyyy').format(item.tanggal)}",
             ),
-            InfoRow(icon: Icons.timer_outlined, text: "${item.durasi} hari"),
             InfoRow(
               icon: Icons.security_outlined,
               text: "Jaminan: ${item.jaminan}",
-            ),
-            InfoRow(
-              icon: Icons.sync_rounded,
-              text: "Status: ${item.status == SewaStatus.proses ? 'Proses' : item.status == SewaStatus.selesai ? 'Selesai' : 'Dibatalkan'}",
             ),
           ],
         ),
@@ -272,25 +279,37 @@ class PesananListTile extends StatelessWidget {
                 Expanded(
                   child: Text(item.nama, style: AppTextStyles.subtitle),
                 ),
-                
-                // --- PERUBAHAN DI SINI (CEK NULL) ---
-                if (onEdit != null)
-                  IconButton(
-                    icon: const Icon(
-                      Icons.edit_outlined,
-                      color: AppColors.accentBlue,
-                    ),
-                    onPressed: onEdit,
-                  ),
-                if (onDelete != null)
-                  IconButton(
-                    icon: const Icon(
-                      Icons.delete_outline_rounded,
-                      color: AppColors.accentRed,
-                    ),
-                    onPressed: onDelete,
-                  ),
-                // --- AKHIR PERUBAHAN ---
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert),
+                  onSelected: (value) {
+                    if (value == 'edit' && onEdit != null) onEdit!();
+                    if (value == 'delete' && onDelete != null) onDelete!();
+                  },
+                  itemBuilder: (BuildContext context) => [
+                    if (onEdit != null)
+                      const PopupMenuItem<String>(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit, color: AppColors.accentBlue, size: 20),
+                            SizedBox(width: 12),
+                            Text('Edit'),
+                          ],
+                        ),
+                      ),
+                    if (onDelete != null)
+                      const PopupMenuItem<String>(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete, color: AppColors.accentRed, size: 20),
+                            SizedBox(width: 12),
+                            Text('Delete'),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -308,10 +327,6 @@ class PesananListTile extends StatelessWidget {
               icon: Icons.receipt_long_outlined,
               text:
                   "Rp ${NumberFormat.decimalPattern('id_ID').format(item.totalHarga)}",
-            ),
-            InfoRow(
-              icon: Icons.sync_rounded,
-              text: "Status: ${item.status == PesananStatus.proses ? 'Proses' : item.status == PesananStatus.selesai ? 'Selesai' : 'Dibatalkan'}",
             ),
           ],
         ),
@@ -391,6 +406,26 @@ class StatCard extends StatelessWidget {
                 ],
               ),
       ),
+    );
+  }
+}
+
+/// A small helper that wraps a scrollable child with a [RefreshIndicator].
+///
+/// If [onRefresh] is null the indicator will perform a short noop delay so
+/// the pull-to-refresh gesture still provides feedback even if no remote
+/// reload logic is supplied by the page.
+class RefreshWrapper extends StatelessWidget {
+  final Widget child;
+  final Future<void> Function()? onRefresh;
+
+  const RefreshWrapper({super.key, required this.child, this.onRefresh});
+
+  @override
+  Widget build(BuildContext context) {
+    return RefreshIndicator(
+      onRefresh: onRefresh ?? (() async => await Future.delayed(const Duration(milliseconds: 500))),
+      child: child,
     );
   }
 }

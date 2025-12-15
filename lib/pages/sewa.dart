@@ -64,17 +64,19 @@ class SewaListContent extends StatelessWidget { // Ganti nama class agar lebih s
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: sewaList.length,
-      itemBuilder: (context, index) {
-        final item = sewaList[index];
-        return SewaListTile(
-          item: item,
-          onDelete: () => onDelete(item),
-          onEdit: () => onEdit(item),
-        );
-      },
+    return RefreshWrapper(
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: sewaList.length,
+        itemBuilder: (context, index) {
+          final item = sewaList[index];
+          return SewaListTile(
+            item: item,
+            onDelete: () => onDelete(item),
+            onEdit: () => onEdit(item),
+          );
+        },
+      ),
     );
   }
 }

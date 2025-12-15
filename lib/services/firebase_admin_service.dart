@@ -519,7 +519,6 @@ class FirebaseAdminService {
         'keterangan': sewa.keterangan,
         'durasi': sewa.durasi,
         'jaminan': sewa.jaminan,
-        'status': sewa.status.toString(),
         'createdById': sewa.createdById,
         'createdByName': sewa.createdByName,
         'timestamp': DateTime.now().toUtc().toIso8601String(),
@@ -542,7 +541,6 @@ class FirebaseAdminService {
         'keterangan': sewa.keterangan,
         'durasi': sewa.durasi,
         'jaminan': sewa.jaminan,
-        'status': sewa.status.toString(),
         'updatedAt': DateTime.now().toUtc().toIso8601String(),
       });
       debugPrint('Sewa updated in RTDB: ${sewa.id}');
@@ -573,7 +571,6 @@ class FirebaseAdminService {
         'tanggalDibuat': pesanan.tanggalDibuat.toIso8601String(),
         'totalHarga': pesanan.totalHarga,
         'keterangan': pesanan.keterangan,
-        'status': pesanan.status.toString(),
         'createdById': pesanan.createdById,
         'createdByName': pesanan.createdByName,
         'timestamp': DateTime.now().toUtc().toIso8601String(),
@@ -593,7 +590,6 @@ class FirebaseAdminService {
         'noHp': pesanan.noHp,
         'totalHarga': pesanan.totalHarga,
         'keterangan': pesanan.keterangan,
-        'status': pesanan.status.toString(),
         'updatedAt': DateTime.now().toUtc().toIso8601String(),
       });
       debugPrint('Pesanan updated in RTDB: ${pesanan.id}');
@@ -610,6 +606,92 @@ class FirebaseAdminService {
     } catch (e) {
       debugPrint('Error deleting pesanan from RTDB: $e');
     }
+  }
+
+  // --- PENGELUARAN OPERATIONS (Realtime Database) ---
+  Future<void> addPengeluaranToRTDB(Pengeluaran pengeluaran) async {
+    try {
+      final ref = _adminDatabase.ref('pengeluaran/${pengeluaran.id}');
+      await ref.set({
+        'id': pengeluaran.id,
+        'deskripsi': pengeluaran.deskripsi,
+        'harga': pengeluaran.harga,
+        'tanggal': pengeluaran.tanggal.toUtc().toIso8601String(),
+        'createdById': pengeluaran.createdById,
+        'createdByName': pengeluaran.createdByName,
+        'isApproved': pengeluaran.isApproved,
+        'approvedById': pengeluaran.approvedById,
+        'approvedByName': pengeluaran.approvedByName,
+        'approvedAt': pengeluaran.approvedAt?.toUtc().toIso8601String(),
+        'timestamp': DateTime.now().toUtc().toIso8601String(),
+      });
+      debugPrint('Pengeluaran added to RTDB: ${pengeluaran.id}');
+    } catch (e) {
+      debugPrint('Error adding pengeluaran to RTDB: $e');
+    }
+  }
+
+  Future<void> updatePengeluaranInRTDB(Pengeluaran pengeluaran) async {
+    try {
+      final ref = _adminDatabase.ref('pengeluaran/${pengeluaran.id}');
+      await ref.update({
+        'deskripsi': pengeluaran.deskripsi,
+        'harga': pengeluaran.harga,
+        'tanggal': pengeluaran.tanggal.toUtc().toIso8601String(),
+        'isApproved': pengeluaran.isApproved,
+        'approvedById': pengeluaran.approvedById,
+        'approvedByName': pengeluaran.approvedByName,
+        'approvedAt': pengeluaran.approvedAt?.toUtc().toIso8601String(),
+        'updatedAt': DateTime.now().toUtc().toIso8601String(),
+      });
+      debugPrint('Pengeluaran updated in RTDB: ${pengeluaran.id}');
+    } catch (e) {
+      debugPrint('Error updating pengeluaran in RTDB: $e');
+    }
+  }
+
+  Future<void> deletePengeluaranFromRTDB(String pengeluaranId) async {
+    try {
+      final ref = _adminDatabase.ref('pengeluaran/$pengeluaranId');
+      await ref.remove();
+      debugPrint('Pengeluaran deleted from RTDB: $pengeluaranId');
+    } catch (e) {
+      debugPrint('Error deleting pengeluaran from RTDB: $e');
+    }
+  }
+
+  // READ PENGELUARAN STREAM FROM RTDB
+  Stream<List<Pengeluaran>> getPengeluaranStreamRTDB() {
+    final ref = _adminDatabase.ref('pengeluaran');
+    return ref.onValue.map((event) {
+      final value = event.snapshot.value;
+      if (value is Map) {
+        final list = <Pengeluaran>[];
+        for (final entry in value.values) {
+          if (entry is Map) {
+            final map = Map<String, dynamic>.from(entry);
+            DateTime tanggal = DateTime.now();
+            try {
+              if (map['tanggal'] is String) tanggal = DateTime.parse(map['tanggal']);
+            } catch (_) {}
+            list.add(Pengeluaran(
+              id: map['id'],
+              deskripsi: map['deskripsi'] ?? '',
+              harga: (map['harga'] is num) ? (map['harga'] as num).toDouble() : 0.0,
+              tanggal: tanggal,
+              createdById: map['createdById'] ?? 'admin_legacy',
+              createdByName: map['createdByName'] ?? 'Data Lama',
+              isApproved: map['isApproved'] ?? true,
+              approvedById: map['approvedById'],
+              approvedByName: map['approvedByName'],
+              approvedAt: map['approvedAt'] != null ? DateTime.tryParse(map['approvedAt']) : null,
+            ));
+          }
+        }
+        return list;
+      }
+      return <Pengeluaran>[];
+    });
   }
 
   // READ SEWA STREAM FROM RTDB
@@ -630,10 +712,6 @@ class FirebaseAdminService {
               if (map['tanggalDibuat'] is String) tanggalDibuat = DateTime.parse(map['tanggalDibuat']);
             } catch (_) {}
 
-            String statusStr = map['status'] ?? 'proses';
-            if (statusStr.contains('.')) statusStr = statusStr.split('.').last;
-            final status = SewaStatus.values.firstWhere((e) => e.name == statusStr, orElse: () => SewaStatus.proses);
-
             list.add(Sewa(
               id: map['id'],
               nama: map['nama'] ?? '',
@@ -645,7 +723,6 @@ class FirebaseAdminService {
               keterangan: map['keterangan'] ?? '',
               durasi: (map['durasi'] is int) ? map['durasi'] as int : int.tryParse(map['durasi']?.toString() ?? '') ?? 0,
               jaminan: map['jaminan'] ?? '',
-              status: status,
               createdById: map['createdById'] ?? 'admin_legacy',
               createdByName: map['createdByName'] ?? 'Data Lama',
             ));
@@ -672,10 +749,6 @@ class FirebaseAdminService {
               if (map['tanggalDibuat'] is String) tanggalDibuat = DateTime.parse(map['tanggalDibuat']);
             } catch (_) {}
 
-            String statusStr = map['status'] ?? 'proses';
-            if (statusStr.contains('.')) statusStr = statusStr.split('.').last;
-            final status = PesananStatus.values.firstWhere((e) => e.name == statusStr, orElse: () => PesananStatus.proses);
-
             list.add(Pesanan(
               id: map['id'],
               nama: map['nama'] ?? '',
@@ -684,7 +757,6 @@ class FirebaseAdminService {
               totalHarga: (map['totalHarga'] is num) ? (map['totalHarga'] as num).toDouble() : 0.0,
               keterangan: map['keterangan'] ?? '',
               tanggalDibuat: tanggalDibuat,
-              status: status,
               createdById: map['createdById'] ?? 'admin_legacy',
               createdByName: map['createdByName'] ?? 'Data Lama',
             ));

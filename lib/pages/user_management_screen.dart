@@ -292,10 +292,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             );
           }
           final userList = snapshot.data!;
-          return ListView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
-            itemCount: userList.length,
-            itemBuilder: (context, index) {
+          return RefreshWrapper(
+            child: ListView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+              itemCount: userList.length,
+              itemBuilder: (context, index) {
               final user = userList[index];
               final isCurrentUser = user.id == widget.currentUser.id;
 
@@ -474,7 +475,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   ),
                 ),
               );
-            },
+              },
+            ),
           );
         },
       ),

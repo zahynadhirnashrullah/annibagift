@@ -2,16 +2,14 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // Pastikan Anda menambahkan intl: ^0.18.1 (atau terbaru) di pubspec.yaml
 import '../services/firebase_admin_service.dart';
-import '../models/models.dart'; 
-import '../theme/app_theme.dart'; 
+import '../models/models.dart';
+import '../theme/app_theme.dart';
+import '../widgets/shared_widgets.dart';
 
 class UserDetailScreen extends StatelessWidget {
   final String userId;
 
-  const UserDetailScreen({
-    super.key,
-    required this.userId,
-  });
+  const UserDetailScreen({super.key, required this.userId});
 
   // Helper untuk format tanggal
   String _formatTimestamp(String? isoString) {
@@ -38,7 +36,10 @@ class UserDetailScreen extends StatelessWidget {
     return Chip(
       label: Text(
         isActive ? 'Aktif' : 'Nonaktif',
-        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
       ),
       backgroundColor: isActive ? AppColors.accentGreen : AppColors.accentRed,
       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -48,9 +49,7 @@ class UserDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Detail Pengguna'),
-      ),
+      appBar: AppBar(title: const Text('Detail Pengguna')),
       body: FutureBuilder<Map<String, dynamic>?>(
         future: FirebaseAdminService.instance.getUserDocument(userId),
         builder: (context, snapshot) {
@@ -72,48 +71,58 @@ class UserDetailScreen extends StatelessWidget {
             padding: const EdgeInsets.all(16.0),
             child: Card(
               elevation: 4,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  _buildDetailTile(
-                    context,
-                    icon: Icons.person_pin_rounded,
-                    title: 'Username',
-                    subtitle: userData['username']?.toString() ?? 'N/A',
-                  ),
-                  _buildDetailTile(
-                    context,
-                    icon: Icons.email_rounded,
-                    title: 'Email',
-                    subtitle: userData['email']?.toString() ?? 'N/A',
-                  ),
-                  _buildDetailTile(
-                    context,
-                    icon: Icons.security_rounded,
-                    title: 'Role',
-                    subtitle: _formatRole(userData['role']?.toString()),
-                  ),
-                  _buildDetailTile(
-                    context,
-                    icon: Icons.toggle_on_rounded,
-                    title: 'Status Akun',
-                    customChild: _buildStatusChip(userData['isActive'] as bool?),
-                  ),
-                  _buildDetailTile(
-                    context,
-                    icon: Icons.date_range_rounded,
-                    title: 'Tanggal Bergabung (createdAt)',
-                    subtitle: _formatTimestamp(userData['createdAt'] as String?),
-                  ),
-                  _buildDetailTile(
-                    context,
-                    icon: Icons.login_rounded,
-                    title: 'Login Terakhir (lastLogin)',
-                    subtitle: _formatTimestamp(userData['lastLogin'] as String?),
-                    isLast: true,
-                  ),
-                ],
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: RefreshWrapper(
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    _buildDetailTile(
+                      context,
+                      icon: Icons.person_pin_rounded,
+                      title: 'Username',
+                      subtitle: userData['username']?.toString() ?? 'N/A',
+                    ),
+                    _buildDetailTile(
+                      context,
+                      icon: Icons.email_rounded,
+                      title: 'Email',
+                      subtitle: userData['email']?.toString() ?? 'N/A',
+                    ),
+                    _buildDetailTile(
+                      context,
+                      icon: Icons.security_rounded,
+                      title: 'Role',
+                      subtitle: _formatRole(userData['role']?.toString()),
+                    ),
+                    _buildDetailTile(
+                      context,
+                      icon: Icons.toggle_on_rounded,
+                      title: 'Status Akun',
+                      customChild: _buildStatusChip(
+                        userData['isActive'] as bool?,
+                      ),
+                    ),
+                    _buildDetailTile(
+                      context,
+                      icon: Icons.date_range_rounded,
+                      title: 'Tanggal Bergabung (createdAt)',
+                      subtitle: _formatTimestamp(
+                        userData['createdAt'] as String?,
+                      ),
+                    ),
+                    _buildDetailTile(
+                      context,
+                      icon: Icons.login_rounded,
+                      title: 'Login Terakhir (lastLogin)',
+                      subtitle: _formatTimestamp(
+                        userData['lastLogin'] as String?,
+                      ),
+                      isLast: true,
+                    ),
+                  ],
+                ),
               ),
             ),
           );
@@ -136,10 +145,11 @@ class UserDetailScreen extends StatelessWidget {
           contentPadding: const EdgeInsets.symmetric(vertical: 8),
           leading: Icon(icon, color: AppColors.primary, size: 30),
           title: Text(title, style: AppTextStyles.body.copyWith(fontSize: 14)),
-          subtitle: customChild ?? 
+          subtitle:
+              customChild ??
               Text(
-                subtitle ?? 'N/A', 
-                style: AppTextStyles.subtitle.copyWith(fontSize: 18)
+                subtitle ?? 'N/A',
+                style: AppTextStyles.subtitle.copyWith(fontSize: 18),
               ),
         ),
         if (!isLast) const Divider(height: 1),

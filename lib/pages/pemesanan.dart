@@ -64,17 +64,19 @@ class PemesananListContent extends StatelessWidget { // Ganti nama class
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: pesananList.length,
-      itemBuilder: (context, index) {
-        final item = pesananList[index];
-        return PesananListTile(
-          item: item,
-          onDelete: () => onDelete(item),
-          onEdit: () => onEdit(item),
-        );
-      },
+    return RefreshWrapper(
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: pesananList.length,
+        itemBuilder: (context, index) {
+          final item = pesananList[index];
+          return PesananListTile(
+            item: item,
+            onDelete: () => onDelete(item),
+            onEdit: () => onEdit(item),
+          );
+        },
+      ),
     );
   }
 }

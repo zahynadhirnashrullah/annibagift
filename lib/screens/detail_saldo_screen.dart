@@ -14,6 +14,7 @@ class DetailSaldoScreen extends StatefulWidget {
   final Function(Pengeluaran) onAddPengeluaran;
   final Function(Pengeluaran, Pengeluaran) onEditPengeluaran;
   final Function(Pengeluaran) onDeletePengeluaran;
+  final Function(Pengeluaran) onApprovePengeluaran;
   // --- 1. TAMBAHKAN CURRENT USER ---
   final User currentUser;
   // --- AKHIR TAMBAHAN ---
@@ -27,6 +28,7 @@ class DetailSaldoScreen extends StatefulWidget {
     required this.onDeletePengeluaran,
     // --- 2. TAMBAHKAN DI KONSTRUKTOR ---
     required this.currentUser,
+    required this.onApprovePengeluaran,
     // --- AKHIR TAMBAHAN ---
   });
 
@@ -78,8 +80,16 @@ class _DetailSaldoScreenState extends State<DetailSaldoScreen> {
 
   double _calculateFilteredTotal() {
     if (_filteredTransactions.isEmpty) return 0;
-    return _filteredTransactions.fold(
-        0.0, (sum, item) => sum + item.jumlah);
+    return _filteredTransactions.fold(0.0, (sum, item) {
+      // Exclude unapproved pengeluaran from total
+      if (item.tipe == TipeTransaksi.pengeluaran) {
+        Pengeluaran? p = _findPengeluaranById(item.referensiId);
+        if (p != null && !p.isApproved) {
+          return sum; // Skip unapproved expense
+        }
+      }
+      return sum + item.jumlah;
+    });
   }
 
   Pengeluaran? _findPengeluaranById(String id) {
@@ -304,9 +314,10 @@ class _DetailSaldoScreenState extends State<DetailSaldoScreen> {
                     message: 'Tidak ada transaksi',
                     icon: Icons.receipt_long_outlined,
                   )
-                : ListView.builder(
-                    itemCount: _filteredTransactions.length,
-                    itemBuilder: (context, index) {
+                : RefreshWrapper(
+                    child: ListView.builder(
+                      itemCount: _filteredTransactions.length,
+                      itemBuilder: (context, index) {
                       final tx = _filteredTransactions[index];
                       // --- 5. PENGECEKAN HAK AKSES EDIT (OPSIONAL) ---
                       // Cek data pengeluaran asli
@@ -320,26 +331,34 @@ class _DetailSaldoScreenState extends State<DetailSaldoScreen> {
                                         (widget.currentUser.role == Role.admin || 
                                          p.createdById == widget.currentUser.id);
                                          
-                      return TransaksiListTile(
-                        transaksi: tx,
-                        onEdit: showButtons
-                            ? () => _showPengeluaranDialog(pengeluaran: p)
-                            : null,
-                        onDelete: showButtons
-                            ? () => _showDeleteConfirmDialog(p)
-                            : null,
-                      );
-                    },
+                        String? extraInfo;
+                        if (p != null) {
+                          if (p.isApproved) {
+                            final approvedAt = p.approvedAt ?? p.tanggal;
+                            extraInfo = 'Disetujui oleh ${p.approvedByName ?? p.approvedById} pada ${DateFormat('d MMM yyyy, HH:mm').format(approvedAt)}';
+                          } else {
+                            extraInfo = 'Menunggu persetujuan';
+                          }
+                        }
+
+                        return TransaksiListTile(
+                          transaksi: tx,
+                          extraInfo: extraInfo,
+                          onEdit: showButtons
+                              ? () => _showPengeluaranDialog(pengeluaran: p)
+                              : null,
+                          onDelete: showButtons
+                              ? () => _showDeleteConfirmDialog(p)
+                              : null,
+                        );
+                      },
+                    ),
                   ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showPengeluaranDialog(),
-        icon: const Icon(Icons.remove_rounded),
-        label: const Text('Pengeluaran'),
-        backgroundColor: AppColors.accentRed,
-      ),
+      // Removed FAB for adding Pengeluaran here — pengeluaran input
+      // moved to the `Pencatatan` page to centralize recording.
     );
   }
 }
@@ -349,12 +368,14 @@ class TransaksiListTile extends StatelessWidget {
   final Transaksi transaksi;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final String? extraInfo;
 
   const TransaksiListTile({
     super.key,
     required this.transaksi,
     this.onEdit,
     this.onDelete,
+    this.extraInfo,
   });
 
   @override
@@ -370,13 +391,22 @@ class TransaksiListTile extends StatelessWidget {
         "Rp ${NumberFormat.decimalPattern('id_ID').format(transaksi.jumlah.abs())}";
     final prefix = isIncome ? '+' : '-';
 
+    // Determine transaction type label
+    final String typeLabel = transaksi.tipe == TipeTransaksi.sewa
+        ? 'Sewa'
+        : transaksi.tipe == TipeTransaksi.pesanan
+            ? 'Pesanan'
+            : 'Pengeluaran';
+
     return ListTile(
       leading: CircleAvatar(
         backgroundColor: amountColor.withAlpha((255 * 0.1).round()),
         child: Icon(iconData, color: amountColor, size: 20),
       ),
       title: Text(
-        transaksi.deskripsi,
+        transaksi.nama != null
+            ? "$typeLabel: ${transaksi.nama}"
+            : transaksi.deskripsi,
         style: AppTextStyles.body.copyWith(
           color: AppColors.textPrimary,
           fontWeight: FontWeight.w500,
@@ -384,29 +414,29 @@ class TransaksiListTile extends StatelessWidget {
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
       ),
-      subtitle: Text(
-        DateFormat('d MMM yyyy, HH:mm').format(transaksi.tanggal),
-        style: AppTextStyles.body.copyWith(fontSize: 12),
-      ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (transaksi.alamat != null) ...[
+            Text(
+              transaksi.alamat!,
+              style: AppTextStyles.body.copyWith(fontSize: 12),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 2),
+          ],
           Text(
-            "$prefix$formattedAmount", 
-            style: AppTextStyles.subtitle.copyWith(color: amountColor),
+            transaksi.tanggalDibuat != null
+                ? DateFormat('d MMM yyyy, HH:mm').format(transaksi.tanggalDibuat!)
+                : DateFormat('d MMM yyyy, HH:mm').format(transaksi.tanggal),
+            style: AppTextStyles.body.copyWith(fontSize: 12),
           ),
-          if (onEdit != null)
-            IconButton(
-              icon: const Icon(Icons.edit_outlined, size: 20),
-              onPressed: onEdit,
-            ),
-          if (onDelete != null)
-            IconButton(
-              icon: const Icon(Icons.delete_outline_rounded,
-                  color: AppColors.accentRed, size: 20),
-              onPressed: onDelete,
-            ),
         ],
+      ),
+      trailing: Text(
+        "$prefix$formattedAmount",
+        style: AppTextStyles.subtitle.copyWith(color: amountColor),
       ),
     );
   }

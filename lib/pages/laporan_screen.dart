@@ -9,27 +9,39 @@ import '../widgets/shared_widgets.dart';
 class LaporanScreen extends StatefulWidget {
   final List<Sewa> sewaList;
   final List<Pesanan> pesananList;
-  final List<User> employees; // <-- 1. TERIMA DAFTAR KARYAWAN
+  final List<Pengeluaran> pengeluaranList;
+  final List<User> employees;
+  final User currentUser;
+  final Function(Pengeluaran) onApprovePengeluaran;
+  final Function(Pengeluaran) onDisapprovePengeluaran;
+  final Function(Pengeluaran) onAddPengeluaran;
 
   const LaporanScreen({
     super.key,
     required this.sewaList,
     required this.pesananList,
-    required this.employees, // <-- 2. TAMBAHKAN DI KONSTRUKTOR
+    required this.pengeluaranList,
+    required this.employees,
+    required this.currentUser,
+    required this.onApprovePengeluaran,
+    required this.onDisapprovePengeluaran,
+    required this.onAddPengeluaran,
   });
 
   @override
   State<LaporanScreen> createState() => _LaporanScreenState();
 }
 
-class _LaporanScreenState extends State<LaporanScreen> {
+class _LaporanScreenState extends State<LaporanScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   int? _selectedMonth;
   int? _selectedYear;
-  String? _selectedEmployeeId; // <-- 3. STATE UNTUK FILTER KARYAWAN
+  String? _selectedEmployeeId;
   List<int> _availableYears = [];
 
   List<Sewa> _filteredSewaList = [];
   List<Pesanan> _filteredPesananList = [];
+  List<Pengeluaran> _filteredPengeluaranList = [];
   double _totalOmset = 0.0;
 
   @override
@@ -37,6 +49,41 @@ class _LaporanScreenState extends State<LaporanScreen> {
     super.initState();
     _initializeFilters();
     _runFilter();
+    final isAdmin = widget.currentUser.role == Role.admin;
+    final tabCount = isAdmin ? 3 : 2;
+    _tabController = TabController(length: tabCount, vsync: this);
+    _tabController.addListener(() {
+      setState(() {});
+    });
+  }
+
+  @override
+  void didUpdateWidget(LaporanScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Rebuild when employees list changes
+    if (oldWidget.employees != widget.employees ||
+        oldWidget.sewaList != widget.sewaList ||
+        oldWidget.pesananList != widget.pesananList ||
+        oldWidget.pengeluaranList != widget.pengeluaranList) {
+      _runFilter();
+    }
+    // If admin status changed, recreate controller with new length
+    final oldTabCount = oldWidget.currentUser.role == Role.admin ? 3 : 2;
+    final newTabCount = widget.currentUser.role == Role.admin ? 3 : 2;
+    if (oldTabCount != newTabCount) {
+      _tabController.removeListener(() {});
+      _tabController.dispose();
+      _tabController = TabController(length: newTabCount, vsync: this);
+      _tabController.addListener(() {
+        setState(() {});
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   void _initializeFilters() {
@@ -57,11 +104,10 @@ class _LaporanScreenState extends State<LaporanScreen> {
           _selectedYear == null || sewa.tanggalDibuat.year == _selectedYear;
       final bool monthMatch = _selectedMonth == null ||
           sewa.tanggalDibuat.month == _selectedMonth;
-      // --- 4. LOGIKA FILTER KARYAWAN ---
       final bool employeeMatch = _selectedEmployeeId == null ||
           sewa.createdById == _selectedEmployeeId;
       
-      return yearMatch && monthMatch && employeeMatch; // <-- 5. TAMBAHKAN
+      return yearMatch && monthMatch && employeeMatch;
     }).toList();
 
     // Filter Pesanan
@@ -70,55 +116,81 @@ class _LaporanScreenState extends State<LaporanScreen> {
           pesanan.tanggalDibuat.year == _selectedYear;
       final bool monthMatch = _selectedMonth == null ||
           pesanan.tanggalDibuat.month == _selectedMonth;
-      // --- 4. LOGIKA FILTER KARYAWAN ---
       final bool employeeMatch = _selectedEmployeeId == null ||
           pesanan.createdById == _selectedEmployeeId;
 
-      return yearMatch && monthMatch && employeeMatch; // <-- 5. TAMBAHKAN
+      return yearMatch && monthMatch && employeeMatch;
     }).toList();
 
-    // Hitung total omset
+    // Filter Pengeluaran
+    List<Pengeluaran> tempPengeluaran = widget.pengeluaranList.where((pengeluaran) {
+      final bool yearMatch = _selectedYear == null ||
+          pengeluaran.tanggal.year == _selectedYear;
+      final bool monthMatch = _selectedMonth == null ||
+          pengeluaran.tanggal.month == _selectedMonth;
+      final bool employeeMatch = _selectedEmployeeId == null ||
+          pengeluaran.createdById == _selectedEmployeeId;
+
+      return yearMatch && monthMatch && employeeMatch;
+    }).toList();
+
+    // Hitung total omset: semua sewa + pesanan - pengeluaran (hanya yang disetujui)
     double omsetSewa =
-        tempSewa.fold(0.0, (sum, item) => sum + item.totalHarga);
+      tempSewa.fold(0.0, (sum, item) => sum + item.totalHarga);
     double omsetPesanan =
-        tempPesanan.fold(0.0, (sum, item) => sum + item.totalHarga);
+      tempPesanan.fold(0.0, (sum, item) => sum + item.totalHarga);
+    // Hanya kurangi pengeluaran yang sudah disetujui
+    double approvedPengeluaran = tempPengeluaran
+      .where((p) => p.isApproved)
+      .fold(0.0, (sum, p) => sum + p.harga);
 
     setState(() {
       _filteredSewaList = tempSewa;
       _filteredPesananList = tempPesanan;
-      _totalOmset = omsetSewa + omsetPesanan;
+      _filteredPengeluaranList = tempPengeluaran;
+      _totalOmset = omsetSewa + omsetPesanan - approvedPengeluaran;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text("Laporan Penjualan"),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: "Data Sewa"),
-              Tab(text: "Data Pesanan"),
-            ],
-          ),
-        ),
-        body: Column(
-          children: [
-            _buildFilterSection(),
-            _buildSummarySection(),
-            Expanded(
-              child: TabBarView(
-                children: [
-                  _buildSewaList(),
-                  _buildPesananList(),
-                ],
-              ),
-            ),
+    final isAdmin = widget.currentUser.role == Role.admin;
+    
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Laporan Penjualan"),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: [
+            const Tab(text: "Data Sewa"),
+            const Tab(text: "Data Pesanan"),
+            if (isAdmin) const Tab(text: "Pengeluaran"),
           ],
         ),
       ),
+      body: Column(
+        children: [
+          _buildFilterSection(),
+          _buildSummarySection(),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildSewaList(),
+                _buildPesananList(),
+                if (isAdmin) _buildPengeluaranList(),
+              ],
+            ),
+          ),
+        ],
+      ),
+      floatingActionButton: isAdmin && _tabController.index == 2
+          ? FloatingActionButton(
+              onPressed: _showAddPengeluaranDialog,
+              tooltip: 'Tambah Pengeluaran (Auto-approve)',
+              child: const Icon(Icons.add),
+            )
+          : null,
     );
   }
 
@@ -264,17 +336,19 @@ class _LaporanScreenState extends State<LaporanScreen> {
         icon: Icons.search_off_rounded,
       );
     }
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _filteredSewaList.length,
-      itemBuilder: (context, index) {
-        final item = _filteredSewaList[index];
-        return SewaListTile(
-          item: item,
-          onDelete: null,
-          onEdit: null, 
-        );
-      },
+    return RefreshWrapper(
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _filteredSewaList.length,
+        itemBuilder: (context, index) {
+          final item = _filteredSewaList[index];
+          return SewaListTile(
+            item: item,
+            onDelete: null,
+            onEdit: null,
+          );
+        },
+      ),
     );
   }
 
@@ -285,15 +359,237 @@ class _LaporanScreenState extends State<LaporanScreen> {
         icon: Icons.search_off_rounded,
       );
     }
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _filteredPesananList.length,
-      itemBuilder: (context, index) {
-        final item = _filteredPesananList[index];
-        return PesananListTile(
-          item: item,
-          onDelete: null,
-          onEdit: null,
+    return RefreshWrapper(
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _filteredPesananList.length,
+        itemBuilder: (context, index) {
+          final item = _filteredPesananList[index];
+          return PesananListTile(
+            item: item,
+            onDelete: null,
+            onEdit: null,
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildPengeluaranList() {
+    if (_filteredPengeluaranList.isEmpty) {
+      return const EmptyStateWidget(
+        message: "Tidak ada data pengeluaran pada periode ini.",
+        icon: Icons.search_off_rounded,
+      );
+    }
+    return RefreshWrapper(
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _filteredPengeluaranList.length,
+        itemBuilder: (context, index) {
+          final item = _filteredPengeluaranList[index];
+          return _buildPengeluaranListTile(item);
+        },
+      ),
+    );
+  }
+
+  Widget _buildPengeluaranListTile(Pengeluaran pengeluaran) {
+    final bool isAdmin = widget.currentUser.role == Role.admin;
+    
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        pengeluaran.deskripsi,
+                        style: AppTextStyles.body.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "Rp ${NumberFormat.decimalPattern('id_ID').format(pengeluaran.harga)}",
+                        style: AppTextStyles.body.copyWith(
+                          color: AppColors.accentRed,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (isAdmin && !pengeluaran.isApproved) ...[
+                  IconButton(
+                    icon: const Icon(Icons.check_circle_outline, size: 24, color: Colors.green),
+                    onPressed: () => _showApproveConfirmationDialog(pengeluaran),
+                    tooltip: 'Setujui',
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.cancel, size: 24, color: Colors.red),
+                    onPressed: () => _showDisapproveConfirmationDialog(pengeluaran),
+                    tooltip: 'Tolak',
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              DateFormat('d MMM yyyy, HH:mm').format(pengeluaran.tanggal),
+              style: AppTextStyles.body.copyWith(fontSize: 12, color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              "Dibuat oleh: ${pengeluaran.createdByName}",
+              style: AppTextStyles.body.copyWith(fontSize: 12, color: AppColors.textSecondary),
+            ),
+            if (pengeluaran.isApproved) ...[
+              const SizedBox(height: 4),
+              Text(
+                "Disetujui oleh: ${pengeluaran.approvedByName ?? pengeluaran.approvedById} pada ${DateFormat('d MMM yyyy, HH:mm').format(pengeluaran.approvedAt ?? pengeluaran.tanggal)}",
+                style: AppTextStyles.body.copyWith(fontSize: 12, color: Colors.green),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddPengeluaranDialog() {
+    final formKey = GlobalKey<FormState>();
+    final deskripsiController = TextEditingController();
+    final hargaController = TextEditingController();
+    DateTime selectedDate = DateTime.now();
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        return StatefulBuilder(builder: (context, setState) {
+          return AlertDialog(
+            title: const Text('Tambah Pengeluaran (Auto-approve)'),
+            content: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  buildTextField(deskripsiController, 'Deskripsi', Icons.description_outlined, maxLines: 3),
+                  const SizedBox(height: 12),
+                  buildTextField(hargaController, 'Harga', Icons.price_check_rounded, keyboardType: TextInputType.number),
+                  const SizedBox(height: 12),
+                  InkWell(
+                    onTap: () async {
+                      DateTime? picked = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate,
+                        firstDate: DateTime(2023),
+                        lastDate: DateTime(2030),
+                      );
+                      if (picked != null) setState(() => selectedDate = picked);
+                    },
+                    child: InputDecorator(
+                      decoration: InputDecoration(
+                        labelText: 'Tanggal',
+                        prefixIcon: const Icon(Icons.calendar_today_rounded),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                      child: Text(DateFormat('d MMMM yyyy').format(selectedDate)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.of(dialogCtx).pop(), child: const Text('Batal')),
+              ElevatedButton(onPressed: () {
+                if (!formKey.currentState!.validate()) return;
+                final double hargaParsed = double.tryParse(hargaController.text.replaceAll('.', '')) ?? 0.0;
+                final pengeluaran = Pengeluaran(
+                  deskripsi: deskripsiController.text,
+                  harga: hargaParsed,
+                  tanggal: selectedDate,
+                  createdById: widget.currentUser.id,
+                  createdByName: widget.currentUser.username,
+                  isApproved: true,
+                  approvedById: widget.currentUser.id,
+                  approvedByName: widget.currentUser.username,
+                  approvedAt: DateTime.now().toUtc(),
+                );
+                widget.onAddPengeluaran(pengeluaran);
+                Navigator.of(dialogCtx).pop();
+              }, child: const Text('Tambah')),
+            ],
+          );
+        });
+      },
+    );
+  }
+
+  void _showApproveConfirmationDialog(Pengeluaran pengeluaran) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Konfirmasi Approve'),
+          content: Text('Apakah Anda yakin ingin menyetujui pengeluaran "${pengeluaran.deskripsi}"?'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Batal'),
+              onPressed: () => Navigator.of(dialogContext).pop(),
+            ),
+            TextButton(
+              child: const Text('Approve', style: TextStyle(color: Colors.green)),
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                widget.onApprovePengeluaran(pengeluaran);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showDisapproveConfirmationDialog(Pengeluaran pengeluaran) {
+    final isApproved = pengeluaran.isApproved;
+    final title = isApproved ? 'Konfirmasi Disapprove' : 'Konfirmasi Reject';
+    final message = isApproved 
+      ? 'Apakah Anda yakin ingin membatalkan persetujuan pengeluaran "${pengeluaran.deskripsi}"?'
+      : 'Apakah Anda yakin ingin menolak pengeluaran "${pengeluaran.deskripsi}"?';
+    final buttonText = isApproved ? 'Disapprove' : 'Reject';
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Batal'),
+              onPressed: () => Navigator.of(dialogContext).pop(),
+            ),
+            TextButton(
+              child: Text(buttonText, style: TextStyle(color: Colors.red)),
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                widget.onDisapprovePengeluaran(pengeluaran);
+              },
+            ),
+          ],
         );
       },
     );

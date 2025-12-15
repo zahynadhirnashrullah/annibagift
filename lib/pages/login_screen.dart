@@ -92,6 +92,11 @@ class _LoginScreenState extends State<LoginScreen> {
               await FirebaseAdminService.instance.loginAsAdmin(email, password);
             }
 
+            // Persist session locally so app restarts keep user logged in
+            try {
+              await AuthService.instance.persistUserSession(user);
+            } catch (_) {}
+
             if (!mounted) return;
             Navigator.pushReplacement(
               context,

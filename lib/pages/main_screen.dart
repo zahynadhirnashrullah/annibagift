@@ -42,8 +42,16 @@ class _MainScreenState extends State<MainScreen> {
   List<Pengeluaran> pengeluaranList = [];
   List<User> employeeList = []; 
   List<Transaksi> _transaksiList = [];
+  // Debug counts to compare Firestore vs RTDB
+  int sewaCountFirestore = 0;
+  int pesananCountFirestore = 0;
+  int pengeluaranCountFirestore = 0;
+  int sewaCountRTDB = 0;
+  int pesananCountRTDB = 0;
+  int pengeluaranCountRTDB = 0;
   StreamSubscription<List<Sewa>>? _sewaStreamSub;
   StreamSubscription<List<Pesanan>>? _pesananStreamSub;
+  StreamSubscription<List<Pengeluaran>>? _pengeluaranStreamSub;
 
   final List<StokItem> stokList = [
     StokItem(id: '1', nama: 'Kotak Kado Besar', jumlah: 15),
@@ -104,6 +112,7 @@ class _MainScreenState extends State<MainScreen> {
   void dispose() {
     _sewaStreamSub?.cancel();
     _pesananStreamSub?.cancel();
+    _pengeluaranStreamSub?.cancel();
     _connectivitySubscription.cancel();
     super.dispose();
   }
@@ -112,29 +121,99 @@ class _MainScreenState extends State<MainScreen> {
     try {
       _sewaStreamSub = FirebaseAdminService.instance.getSewaStreamRTDB().listen((remoteSewa) {
         final bool isAdmin = widget.currentUser.role == Role.admin;
-        final filtered = isAdmin ? remoteSewa : remoteSewa.where((s) => s.createdById == widget.currentUser.id).toList();
+        final filteredRemote = isAdmin ? remoteSewa : remoteSewa.where((s) => s.createdById == widget.currentUser.id).toList();
+        // set RTDB counts for debugging
+        sewaCountRTDB = filteredRemote.length;
+        // Merge RTDB remote items with existing Firestore-loaded items to avoid losing entries
+        final Map<String, Sewa> keyed = {};
+        // Start with existing local items (from Firestore)
+        for (final s in sewaList) {
+          keyed[s.id] = s;
+        }
+        // Overlay/replace with RTDB items (prefer RTDB for freshness)
+        for (final s in filteredRemote) {
+          keyed[s.id] = s;
+        }
+        final merged = keyed.values.toList();
         setState(() {
-          sewaList = filtered;
+          sewaList = merged;
           _rebuildTransactionList();
         });
-        debugPrint('RTDB sewa stream update: ${sewaList.length} items (isAdmin: $isAdmin)');
+        debugPrint('RTDB sewa stream merged update: ${sewaList.length} items (isAdmin: $isAdmin)');
       }, onError: (e) {
         debugPrint('Error in sewa RTDB stream: $e');
       });
 
       _pesananStreamSub = FirebaseAdminService.instance.getPesananStreamRTDB().listen((remotePesanan) {
         final bool isAdmin = widget.currentUser.role == Role.admin;
-        final filtered = isAdmin ? remotePesanan : remotePesanan.where((p) => p.createdById == widget.currentUser.id).toList();
+        final filteredRemote = isAdmin ? remotePesanan : remotePesanan.where((p) => p.createdById == widget.currentUser.id).toList();
+        final Map<String, Pesanan> keyed = {};
+        pesananCountRTDB = filteredRemote.length;
+        // Preserve existing Firestore-loaded pesanan
+        for (final p in pesananList) {
+          keyed[p.id] = p;
+        }
+        // Overlay with RTDB items
+        for (final p in filteredRemote) {
+          keyed[p.id] = p;
+        }
+        final merged = keyed.values.toList();
         setState(() {
-          pesananList = filtered;
+          pesananList = merged;
           _rebuildTransactionList();
         });
-        debugPrint('RTDB pesanan stream update: ${pesananList.length} items (isAdmin: $isAdmin)');
+        debugPrint('RTDB pesanan stream merged update: ${pesananList.length} items (isAdmin: $isAdmin)');
       }, onError: (e) {
         debugPrint('Error in pesanan RTDB stream: $e');
       });
+
+      _pengeluaranStreamSub = FirebaseAdminService.instance.getPengeluaranStreamRTDB().listen((remotePengeluaran) {
+        final bool isAdmin = widget.currentUser.role == Role.admin;
+        final filteredRemote = isAdmin ? remotePengeluaran : remotePengeluaran.where((p) => p.createdById == widget.currentUser.id).toList();
+        final Map<String, Pengeluaran> keyed = {};
+        pengeluaranCountRTDB = filteredRemote.length;
+        // Start with existing Firestore-loaded pengeluaran
+        for (final p in pengeluaranList) {
+          keyed[p.id] = p;
+        }
+        // Overlay with RTDB items
+        for (final p in filteredRemote) {
+          keyed[p.id] = p;
+        }
+        final merged = keyed.values.toList();
+        setState(() {
+          pengeluaranList = merged;
+          _rebuildTransactionList();
+        });
+        debugPrint('RTDB pengeluaran stream merged update: ${pengeluaranList.length} items (isAdmin: $isAdmin)');
+      }, onError: (e) {
+        debugPrint('Error in pengeluaran RTDB stream: $e');
+      });
+
+      // Reload employees list periodically or on demand for admin users
+      if (widget.currentUser.role == Role.admin) {
+        _reloadEmployeesList();
+      }
     } catch (e) {
       debugPrint('Failed to start RTDB listeners: $e');
+    }
+  }
+
+  void _reloadEmployeesList() async {
+    try {
+      final usersSnapshot = await usersCollection
+          .where('role', isEqualTo: Role.karyawan.toString())
+          .where('isDeleted', isEqualTo: false)
+          .get();
+      final loadedEmployees = usersSnapshot.docs
+          .map((doc) => User.fromMap(doc.data() as Map<String, dynamic>))
+          .toList();
+      setState(() {
+        employeeList = loadedEmployees;
+      });
+      debugPrint('Reloaded ${loadedEmployees.length} employees');
+    } catch (e) {
+      debugPrint('Error reloading employees: $e');
     }
   }
   
@@ -187,22 +266,18 @@ class _MainScreenState extends State<MainScreen> {
         sewaList = loadedSewa;
         pesananList = loadedPesanan;
         pengeluaranList = loadedPengeluaran;
+        // store firestore counts for debugging
+        sewaCountFirestore = loadedSewa.length;
+        pesananCountFirestore = loadedPesanan.length;
+        pengeluaranCountFirestore = loadedPengeluaran.length;
         employeeList = loadedEmployees;
         _rebuildTransactionList(); 
         _isLoading = false; 
       });
-          debugPrint("Loaded ${loadedSewa.length} sewa documents (isAdmin: $isAdmin, userId: ${widget.currentUser.id})");
-          debugPrint("Loaded ${loadedPesanan.length} pesanan documents (isAdmin: $isAdmin, userId: ${widget.currentUser.id})");
-          debugPrint("Loaded ${loadedPengeluaran.length} pengeluaran documents");
-
-          setState(() {
-            sewaList = loadedSewa;
-            pesananList = loadedPesanan;
-            pengeluaranList = loadedPengeluaran;
-            employeeList = loadedEmployees;
-            _rebuildTransactionList(); 
-            _isLoading = false; 
-          });
+      debugPrint("Loaded ${loadedSewa.length} sewa documents (isAdmin: $isAdmin, userId: ${widget.currentUser.id})");
+      debugPrint("Loaded ${loadedPesanan.length} pesanan documents (isAdmin: $isAdmin, userId: ${widget.currentUser.id})");
+      debugPrint("Loaded ${loadedPengeluaran.length} pengeluaran documents");
+      debugPrint("Loaded ${loadedEmployees.length} employees (isAdmin: $isAdmin)");
     } catch (e) {
       debugPrint("Error loading data: $e");
       setState(() {
@@ -216,6 +291,7 @@ class _MainScreenState extends State<MainScreen> {
       _transaksiList = [
         ...sewaList.map((s) => Transaksi.dariSewa(s)),
         ...pesananList.map((p) => Transaksi.dariPesanan(p)),
+        // Include all pengeluaran in the list (show pending items), totals will ignore unapproved ones
         ...pengeluaranList.map((e) => Transaksi.dariPengeluaran(e)),
       ];
       _calculateTotalSaldo();
@@ -227,8 +303,19 @@ class _MainScreenState extends State<MainScreen> {
       _totalSaldo = 0.0;
       return;
     }
-    _totalSaldo =
-        _transaksiList.fold(0.0, (previous, item) => previous + item.jumlah);
+    double total = 0.0;
+    for (final item in _transaksiList) {
+      if (item.tipe == TipeTransaksi.pengeluaran) {
+        final matches = pengeluaranList.where((x) => x.id == item.referensiId).toList();
+        if (matches.isEmpty) continue;
+        final p = matches.first;
+        if (!p.isApproved) continue; // skip unapproved pengeluaran
+        total += item.jumlah;
+      } else {
+        total += item.jumlah;
+      }
+    }
+    _totalSaldo = total;
   }
 
   
@@ -244,7 +331,7 @@ class _MainScreenState extends State<MainScreen> {
         debugPrint("Warning: Failed to save sewa to RTDB: $e");
       }
       setState(() {
-        sewaList.add(data);
+        if (!sewaList.any((s) => s.id == data.id)) sewaList.add(data);
         _rebuildTransactionList();
       });
     } catch (e) {
@@ -304,7 +391,6 @@ class _MainScreenState extends State<MainScreen> {
         keterangan: newData.keterangan,
         durasi: newData.durasi,
         jaminan: newData.jaminan,
-        status: newData.status,
         createdById: oldData.createdById, 
         createdByName: oldData.createdByName,
       );
@@ -339,7 +425,7 @@ class _MainScreenState extends State<MainScreen> {
         debugPrint("Warning: Failed to save pesanan to RTDB: $e");
       }
       setState(() {
-        pesananList.add(data);
+        if (!pesananList.any((p) => p.id == data.id)) pesananList.add(data);
         _rebuildTransactionList();
       });
     } catch (e) {
@@ -396,7 +482,6 @@ class _MainScreenState extends State<MainScreen> {
         totalHarga: newData.totalHarga,
         keterangan: newData.keterangan,
         tanggalDibuat: newData.tanggalDibuat,
-        status: newData.status,
         createdById: oldData.createdById,
         createdByName: oldData.createdByName, 
       );
@@ -422,9 +507,31 @@ class _MainScreenState extends State<MainScreen> {
 
   void _addPengeluaran(Pengeluaran data) async {
     try {
-      await pengeluaranCollection.doc(data.id).set(data.toMap());
+      // If created by non-admin, mark as not approved so it won't affect totals
+      final shouldApprove = widget.currentUser.role == Role.admin;
+      final now = DateTime.now().toUtc();
+      final pengeluaranToSave = Pengeluaran(
+        id: data.id,
+        deskripsi: data.deskripsi,
+        harga: data.harga,
+        tanggal: data.tanggal,
+        createdById: data.createdById,
+        createdByName: data.createdByName,
+        isApproved: shouldApprove,
+        approvedById: shouldApprove ? widget.currentUser.id : null,
+        approvedByName: shouldApprove ? widget.currentUser.username : null,
+        approvedAt: shouldApprove ? now : null,
+      );
+
+      await pengeluaranCollection.doc(pengeluaranToSave.id).set(pengeluaranToSave.toMap());
+      // Also save to RTDB
+      try {
+        await FirebaseAdminService.instance.addPengeluaranToRTDB(pengeluaranToSave);
+      } catch (e) {
+        debugPrint('Warning: failed to save pengeluaran to RTDB: $e');
+      }
       setState(() {
-        pengeluaranList.add(data);
+        if (!pengeluaranList.any((p) => p.id == pengeluaranToSave.id)) pengeluaranList.add(pengeluaranToSave);
         _rebuildTransactionList();
       });
     } catch (e) {
@@ -440,6 +547,12 @@ class _MainScreenState extends State<MainScreen> {
       }
       
       await pengeluaranCollection.doc(data.id).delete();
+      // Also delete from RTDB
+      try {
+        await FirebaseAdminService.instance.deletePengeluaranFromRTDB(data.id);
+      } catch (e) {
+        debugPrint('Warning: failed to delete pengeluaran from RTDB: $e');
+      }
       setState(() {
         pengeluaranList.removeWhere((item) => item.id == data.id);
         _rebuildTransactionList();
@@ -457,10 +570,21 @@ class _MainScreenState extends State<MainScreen> {
          harga: newData.harga,
          tanggal: newData.tanggal,
          createdById: oldData.createdById, 
-         createdByName: oldData.createdByName, 
+         createdByName: oldData.createdByName,
+         // preserve approval state unless an admin edits
+         isApproved: widget.currentUser.role == Role.admin ? (newData.isApproved) : oldData.isApproved,
+        approvedById: oldData.approvedById,
+        approvedByName: oldData.approvedByName,
+        approvedAt: oldData.approvedAt,
        );
        
       await pengeluaranCollection.doc(finalData.id).update(finalData.toMap());
+      // Also update in RTDB
+      try {
+        await FirebaseAdminService.instance.updatePengeluaranInRTDB(finalData);
+      } catch (e) {
+        debugPrint('Warning: failed to update pengeluaran in RTDB: $e');
+      }
       setState(() {
         final index =
             pengeluaranList.indexWhere((item) => item.id == oldData.id);
@@ -472,6 +596,92 @@ class _MainScreenState extends State<MainScreen> {
      } catch (e) {
        debugPrint("Error editing pengeluaran: $e");
      }
+  }
+
+  // Approve a pending pengeluaran (admin action)
+  void _approvePengeluaran(Pengeluaran p) async {
+    try {
+      final now = DateTime.now().toUtc();
+      final updated = Pengeluaran(
+        id: p.id,
+        deskripsi: p.deskripsi,
+        harga: p.harga,
+        tanggal: p.tanggal,
+        createdById: p.createdById,
+        createdByName: p.createdByName,
+        isApproved: true,
+        approvedById: widget.currentUser.id,
+        approvedByName: widget.currentUser.username,
+        approvedAt: now,
+      );
+
+      await pengeluaranCollection.doc(updated.id).update({
+        'isApproved': true,
+        'approvedById': updated.approvedById,
+        'approvedByName': updated.approvedByName,
+        'approvedAt': updated.approvedAt?.toUtc().toIso8601String(),
+      });
+
+      // Also update RTDB
+      try {
+        await FirebaseAdminService.instance.updatePengeluaranInRTDB(updated);
+      } catch (e) {
+        debugPrint('Warning: failed to update pengeluaran in RTDB: $e');
+      }
+
+      final idx = pengeluaranList.indexWhere((x) => x.id == p.id);
+      if (idx != -1) {
+        setState(() {
+          pengeluaranList[idx] = updated;
+          _rebuildTransactionList();
+        });
+      }
+    } catch (e) {
+      debugPrint('Error approving pengeluaran: $e');
+    }
+  }
+
+
+  // Disapprove an approved pengeluaran (admin action)
+  void _disapprovePengeluaran(Pengeluaran p) async {
+    try {
+      final updated = Pengeluaran(
+        id: p.id,
+        deskripsi: p.deskripsi,
+        harga: p.harga,
+        tanggal: p.tanggal,
+        createdById: p.createdById,
+        createdByName: p.createdByName,
+        isApproved: false,
+        approvedById: null,
+        approvedByName: null,
+        approvedAt: null,
+      );
+
+      await pengeluaranCollection.doc(updated.id).update({
+        'isApproved': false,
+        'approvedById': null,
+        'approvedByName': null,
+        'approvedAt': null,
+      });
+
+      // Also update RTDB
+      try {
+        await FirebaseAdminService.instance.updatePengeluaranInRTDB(updated);
+      } catch (e) {
+        debugPrint('Warning: failed to update pengeluaran in RTDB: $e');
+      }
+
+      final idx = pengeluaranList.indexWhere((x) => x.id == p.id);
+      if (idx != -1) {
+        setState(() {
+          pengeluaranList[idx] = updated;
+          _rebuildTransactionList();
+        });
+      }
+    } catch (e) {
+      debugPrint('Error disapproving pengeluaran: $e');
+    }
   }
 
 
@@ -504,6 +714,7 @@ class _MainScreenState extends State<MainScreen> {
           onAddPengeluaran: _addPengeluaran,
           onEditPengeluaran: _editPengeluaran,
           onDeletePengeluaran: _deletePengeluaran,
+            onApprovePengeluaran: _approvePengeluaran,
           currentUser: widget.currentUser,
         ),
       ),
@@ -576,6 +787,10 @@ class _MainScreenState extends State<MainScreen> {
         onNavigateToDetailSaldo: _navigateToDetailSaldo,
         currentUser: widget.currentUser,
         onLogout: _logout,
+        transactions: _transaksiList,
+        employees: employeeList,
+        sewaCountRTDB: sewaCountRTDB,
+        pesananCountRTDB: pesananCountRTDB,
       ),
     );
     navItems.add(
@@ -592,7 +807,12 @@ class _MainScreenState extends State<MainScreen> {
         LaporanScreen(
           sewaList: sewaList,
           pesananList: pesananList,
+          pengeluaranList: pengeluaranList,
           employees: employeeList,
+          currentUser: widget.currentUser,
+          onApprovePengeluaran: _approvePengeluaran,
+          onDisapprovePengeluaran: _disapprovePengeluaran,
+          onAddPengeluaran: _addPengeluaran,
         ),
         // Index 2: Users
         UserManagementScreen(currentUser: widget.currentUser),
@@ -614,6 +834,7 @@ class _MainScreenState extends State<MainScreen> {
         PencatatanScreen(
           onConfirmSewa: _addSewa,
           onConfirmPesanan: _addPesanan,
+          onConfirmPengeluaran: _addPengeluaran,
           // Setelah input, arahkan ke Index 2 (Halaman Data)
           onNavigateAfterSubmit: (int pageIndex) => _onItemTapped(2), 
           currentUser: widget.currentUser,
@@ -627,6 +848,12 @@ class _MainScreenState extends State<MainScreen> {
           pesananList: pesananList,
           onDeletePesanan: _deletePesanan,
           onEditPesanan: _navigateToEditPesanan,
+          pengeluaranList: pengeluaranList,
+          onDeletePengeluaran: _deletePengeluaran,
+          onEditPengeluaran: _editPengeluaran,
+          onApprovePengeluaran: _approvePengeluaran,
+          onDisapprovePengeluaran: _disapprovePengeluaran,
+          currentUser: widget.currentUser,
         ),
       ]);
       navItems.addAll([

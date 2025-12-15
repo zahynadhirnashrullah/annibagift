@@ -27,12 +27,6 @@ class StokItem {
 }
 
 
-enum SewaStatus {
-  proses,
-  selesai,
-  dibatalkan,
-}
-
 class Sewa {
   final String id;
   final String nama;
@@ -44,7 +38,6 @@ class Sewa {
   final double totalHarga;
   final int durasi;
   final String jaminan;
-  final SewaStatus status;
   // --- TAMBAHAN UNTUK DATA PER-KARYAWAN ---
   final String createdById;
   final String createdByName;
@@ -61,13 +54,11 @@ class Sewa {
     required this.keterangan,
     required this.durasi,
     required this.jaminan,
-    SewaStatus? status,
     // --- TAMBAHAN DI KONSTRUKTOR ---
     required this.createdById,
     required this.createdByName,
   })  : id = id ?? uuid.v4(),
-        tanggalDibuat = tanggalDibuat ?? DateTime.now(),
-        status = status ?? SewaStatus.proses;
+        tanggalDibuat = tanggalDibuat ?? DateTime.now();
 
   Map<String, dynamic> toMap() {
     return {
@@ -81,7 +72,6 @@ class Sewa {
       'totalHarga': totalHarga,
       'durasi': durasi,
       'jaminan': jaminan,
-      'status': status.name,
       // --- TAMBAHAN UNTUK DISIMPAN ---
       'createdById': createdById,
       'createdByName': createdByName,
@@ -100,20 +90,12 @@ class Sewa {
       keterangan: map['keterangan'],
       durasi: map['durasi'],
       jaminan: map['jaminan'],
-      status: SewaStatus.values
-          .firstWhere((e) => e.name == map['status'], orElse: () => SewaStatus.proses),
       // --- TAMBAHAN UNTUK DIBACA ---
       // Jika data lama belum punya 'createdById', beri nilai default (misal 'admin_legacy')
       createdById: map['createdById'] ?? 'admin_legacy',
       createdByName: map['createdByName'] ?? 'Data Lama',
     );
   }
-}
-
-enum PesananStatus {
-  proses,
-  selesai,
-  dibatalkan,
 }
 
 class Pesanan {
@@ -124,7 +106,6 @@ class Pesanan {
   final double totalHarga;
   final String keterangan;
   final DateTime tanggalDibuat;
-  final PesananStatus status;
   // --- TAMBAHAN UNTUK DATA PER-KARYAWAN ---
   final String createdById;
   final String createdByName;
@@ -138,13 +119,11 @@ class Pesanan {
     required this.totalHarga,
     required this.keterangan,
     DateTime? tanggalDibuat,
-    PesananStatus? status,
     // --- TAMBAHAN DI KONSTRUKTOR ---
     required this.createdById,
     required this.createdByName,
   })  : id = id ?? uuid.v4(),
-        tanggalDibuat = tanggalDibuat ?? DateTime.now(),
-        status = status ?? PesananStatus.proses;
+        tanggalDibuat = tanggalDibuat ?? DateTime.now();
 
   Map<String, dynamic> toMap() {
     return {
@@ -155,7 +134,6 @@ class Pesanan {
       'totalHarga': totalHarga,
       'keterangan': keterangan,
       'tanggalDibuat': Timestamp.fromDate(tanggalDibuat),
-      'status': status.name,
       // --- TAMBAHAN UNTUK DISIMPAN ---
       'createdById': createdById,
       'createdByName': createdByName,
@@ -171,8 +149,6 @@ class Pesanan {
       totalHarga: map['totalHarga'],
       keterangan: map['keterangan'],
       tanggalDibuat: (map['tanggalDibuat'] as Timestamp).toDate(),
-      status: PesananStatus.values
-          .firstWhere((e) => e.name == map['status'], orElse: () => PesananStatus.proses),
       // --- TAMBAHAN UNTUK DIBACA ---
       createdById: map['createdById'] ?? 'admin_legacy',
       createdByName: map['createdByName'] ?? 'Data Lama',
@@ -188,6 +164,12 @@ class Pengeluaran {
   // --- TAMBAHAN UNTUK DATA PER-KARYAWAN ---
   final String createdById;
   final String createdByName;
+  // Approval flag: only approved pengeluaran affect totals
+  final bool isApproved;
+  // Approver metadata
+  final String? approvedById;
+  final DateTime? approvedAt;
+  final String? approvedByName;
   // --- AKHIR TAMBAHAN ---
 
   Pengeluaran({
@@ -198,6 +180,10 @@ class Pengeluaran {
     // --- TAMBAHAN DI KONSTRUKTOR ---
     required this.createdById,
     required this.createdByName,
+    this.isApproved = true,
+    this.approvedById,
+    this.approvedAt,
+    this.approvedByName,
   }) : id = id ?? uuid.v4();
 
   Map<String, dynamic> toMap() {
@@ -209,6 +195,10 @@ class Pengeluaran {
       // --- TAMBAHAN UNTUK DISIMPAN ---
       'createdById': createdById,
       'createdByName': createdByName,
+      'isApproved': isApproved,
+      'approvedById': approvedById,
+      'approvedByName': approvedByName,
+      'approvedAt': approvedAt?.toUtc().toIso8601String(),
     };
   }
 
@@ -221,6 +211,10 @@ class Pengeluaran {
       // --- TAMBAHAN UNTUK DIBACA ---
       createdById: map['createdById'] ?? 'admin_legacy',
       createdByName: map['createdByName'] ?? 'Data Lama',
+      isApproved: map['isApproved'] ?? true,
+      approvedById: map['approvedById'],
+      approvedByName: map['approvedByName'],
+      approvedAt: map['approvedAt'] != null ? DateTime.tryParse(map['approvedAt']) : null,
     );
   }
 }
@@ -235,6 +229,9 @@ class Transaksi {
   final double jumlah;
   final DateTime tanggal;
   final String referensiId; // id dari Sewa/Pesanan/Pengeluaran asli
+  final String? nama;
+  final String? alamat;
+  final DateTime? tanggalDibuat;
 
   Transaksi({
     required this.id,
@@ -243,6 +240,9 @@ class Transaksi {
     required this.jumlah,
     required this.tanggal,
     required this.referensiId,
+    this.nama,
+    this.alamat,
+    this.tanggalDibuat,
   });
 
   // Helper untuk konversi agar mudah ditampilkan
@@ -250,11 +250,13 @@ class Transaksi {
     return Transaksi(
       id: uuid.v4(),
       tipe: TipeTransaksi.sewa,
-      // Tambahkan nama karyawan di deskripsi
       deskripsi: "Sewa: ${sewa.nama} (${sewa.createdByName}) - ${sewa.keterangan}",
       jumlah: sewa.totalHarga,
       tanggal: sewa.tanggalDibuat,
       referensiId: sewa.id,
+      nama: sewa.nama,
+      alamat: sewa.alamat,
+      tanggalDibuat: sewa.tanggalDibuat,
     );
   }
 
@@ -262,11 +264,13 @@ class Transaksi {
     return Transaksi(
       id: uuid.v4(),
       tipe: TipeTransaksi.pesanan,
-      // Tambahkan nama karyawan di deskripsi
       deskripsi: "Pesanan: ${pesanan.nama} (${pesanan.createdByName}) - ${pesanan.keterangan}",
       jumlah: pesanan.totalHarga,
       tanggal: pesanan.tanggalDibuat,
       referensiId: pesanan.id,
+      nama: pesanan.nama,
+      alamat: pesanan.alamat,
+      tanggalDibuat: pesanan.tanggalDibuat,
     );
   }
 
@@ -274,7 +278,6 @@ class Transaksi {
     return Transaksi(
       id: uuid.v4(),
       tipe: TipeTransaksi.pengeluaran,
-      // Tambahkan nama karyawan di deskripsi
       deskripsi: "Pengeluaran: ${pengeluaran.deskripsi} (${pengeluaran.createdByName})",
       jumlah: -pengeluaran.harga, // Pengeluaran adalah nilai negatif
       tanggal: pengeluaran.tanggal,

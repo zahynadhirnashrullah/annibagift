@@ -6,6 +6,8 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import '../models/models.dart';
 import 'package:bcrypt/bcrypt.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class AuthService {
   final firebase_auth.FirebaseAuth _auth = firebase_auth.FirebaseAuth.instance;
@@ -19,6 +21,38 @@ class AuthService {
   // Fungsi sign out
   Future<void> signOut() async {
     await _auth.signOut();
+    // Clear persisted user session
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('saved_user');
+    } catch (_) {}
+  }
+
+  // Persist logged-in user to local storage
+  Future<void> persistUserSession(User user) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final map = user.toMap();
+      // Ensure role is saved as string
+      map['role'] = user.role.toString();
+      await prefs.setString('saved_user', json.encode(map));
+    } catch (e) {
+      debugPrint('Failed to persist user session: $e');
+    }
+  }
+
+  // Restore persisted user session if available
+  Future<User?> restoreUserSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final s = prefs.getString('saved_user');
+      if (s == null || s.isEmpty) return null;
+      final map = Map<String, dynamic>.from(json.decode(s) as Map);
+      return User.fromMap(map);
+    } catch (e) {
+      debugPrint('Failed to restore user session: $e');
+      return null;
+    }
   }
 
   Future<List<User>> getUsers() async {

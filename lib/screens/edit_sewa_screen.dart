@@ -31,7 +31,6 @@ class _EditSewaScreenState extends State<EditSewaScreen> {
 
   DateTime? _selectedDate;
   String? _selectedJaminan;
-  SewaStatus? _selectedSewaStatus;
 
   final List<String> _jaminanOptions = [
     "KTP",
@@ -51,7 +50,6 @@ class _EditSewaScreenState extends State<EditSewaScreen> {
     _hargaController.text = NumberFormat('#,###', 'id_ID').format(widget.sewa.totalHarga);
     _selectedDate = widget.sewa.tanggal;
     _selectedJaminan = widget.sewa.jaminan;
-    _selectedSewaStatus = widget.sewa.status;
   }
 
   @override
@@ -121,7 +119,6 @@ class _EditSewaScreenState extends State<EditSewaScreen> {
       keterangan: _keteranganController.text,
       durasi: int.tryParse(_durasiController.text) ?? 0,
       jaminan: _selectedJaminan!,
-      status: _selectedSewaStatus ?? SewaStatus.proses,
       
       // --- PERUBAHAN PENTING DI SINI ---
       // Memastikan data pemilik asli tidak berubah saat diedit
@@ -142,7 +139,8 @@ class _EditSewaScreenState extends State<EditSewaScreen> {
       ),
       body: Form(
         key: _sewaFormKey,
-        child: ListView(
+        child: RefreshWrapper(
+          child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
             buildTextField(
@@ -181,10 +179,9 @@ class _EditSewaScreenState extends State<EditSewaScreen> {
               Icons.notes_rounded,
               maxLines: 3,
             ),
-            const SizedBox(height: 16),
-            _buildSewaStatusDropdown(),
           ],
         ),
+      ),
       ),
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -241,27 +238,4 @@ class _EditSewaScreenState extends State<EditSewaScreen> {
     );
   }
 
-  Widget _buildSewaStatusDropdown() {
-    return DropdownButtonFormField<SewaStatus>(
-      initialValue: _selectedSewaStatus,
-      items: SewaStatus.values
-          .map((status) => DropdownMenuItem(
-                value: status,
-                child: Text(status == SewaStatus.proses
-                    ? 'Proses'
-                    : status == SewaStatus.selesai
-                        ? 'Selesai'
-                        : 'Dibatalkan'),
-              ))
-          .toList(),
-      onChanged: (v) => setState(() => _selectedSewaStatus = v),
-      decoration: InputDecoration(
-        labelText: 'Status',
-        prefixIcon: const Icon(Icons.sync_rounded),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        filled: true,
-        fillColor: Colors.white,
-      ),
-    );
-  }
 }

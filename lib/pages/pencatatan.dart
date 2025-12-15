@@ -9,6 +9,7 @@ import '../theme/app_theme.dart';
 class PencatatanScreen extends StatefulWidget {
   final Function(Sewa) onConfirmSewa;
   final Function(Pesanan) onConfirmPesanan;
+  final Function(Pengeluaran) onConfirmPengeluaran;
   final Function(int) onNavigateAfterSubmit;
   final User currentUser; // <-- 1. TAMBAHKAN CURRENT USER
 
@@ -16,6 +17,7 @@ class PencatatanScreen extends StatefulWidget {
     super.key,
     required this.onConfirmSewa,
     required this.onConfirmPesanan,
+    required this.onConfirmPengeluaran,
     required this.onNavigateAfterSubmit,
     required this.currentUser, // <-- 2. TAMBAHKAN DI KONSTRUKTOR
   });
@@ -37,11 +39,15 @@ class _PencatatanScreenState extends State<PencatatanScreen>
   final _noHpController = TextEditingController();
   final _keteranganController = TextEditingController();
   final _hargaController = TextEditingController();
+  // Pengeluaran controllers
+  final _pengeluaranFormKey = GlobalKey<FormState>();
+  final _pengeluaranDeskripsiController = TextEditingController();
+  final _pengeluaranHargaController = TextEditingController();
+  DateTime? _pengeluaranDate;
 
   DateTime? _selectedDate;
   DateTime? _selectedPickupDate;
   String? _selectedJaminan;
-  SewaStatus? _selectedSewaStatus;
 
   final List<String> _jaminanOptions = [
     "KTP",
@@ -53,7 +59,7 @@ class _PencatatanScreenState extends State<PencatatanScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -65,6 +71,8 @@ class _PencatatanScreenState extends State<PencatatanScreen>
     _noHpController.dispose();
     _keteranganController.dispose();
     _hargaController.dispose();
+    _pengeluaranDeskripsiController.dispose();
+    _pengeluaranHargaController.dispose();
     super.dispose();
   }
 
@@ -170,7 +178,6 @@ class _PencatatanScreenState extends State<PencatatanScreen>
         keterangan: keterangan,
         durasi: int.tryParse(_durasiController.text) ?? 0,
         jaminan: _selectedJaminan!,
-        status: _selectedSewaStatus ?? SewaStatus.proses,
         // --- 4. MASUKKAN DATA USER KE MODEL ---
         createdById: currentUserId,
         createdByName: currentUserName,
@@ -200,7 +207,6 @@ class _PencatatanScreenState extends State<PencatatanScreen>
         noHp: noHp,
         totalHarga: totalHarga, 
         keterangan: keterangan,
-        status: PesananStatus.proses,
         // --- 4. MASUKKAN DATA USER KE MODEL ---
         createdById: currentUserId,
         createdByName: currentUserName,
@@ -228,7 +234,6 @@ class _PencatatanScreenState extends State<PencatatanScreen>
       _selectedDate = null;
       _selectedPickupDate = null;
       _selectedJaminan = null;
-      _selectedSewaStatus = null;
     });
   }
   
@@ -246,12 +251,13 @@ class _PencatatanScreenState extends State<PencatatanScreen>
           tabs: const [
             Tab(text: "Sewa"),
             Tab(text: "Beli"),
+            Tab(text: "Pengeluaran"),
           ],
         ),
       ),
       body: TabBarView(
         controller: _tabController,
-        children: [_buildSewaForm(), _buildPesananForm()],
+        children: [_buildSewaForm(), _buildPesananForm(), _buildPengeluaranForm()],
       ),
       bottomNavigationBar: Container(
         padding: EdgeInsets.fromLTRB(
@@ -269,10 +275,50 @@ class _PencatatanScreenState extends State<PencatatanScreen>
         child: buildGradientButton(
           'Simpan Data',
           Icons.save_rounded,
-          _submitForm,
+          () {
+            if (_tabController.index == 2) {
+              _submitPengeluaran();
+            } else {
+              _submitForm();
+            }
+          },
         ),
       ),
     );
+  }
+
+  void _submitPengeluaran() {
+    if (!_pengeluaranFormKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Harap lengkapi semua data"), backgroundColor: AppColors.accentRed),
+      );
+      return;
+    }
+
+    final deskripsi = _pengeluaranDeskripsiController.text;
+    final harga = double.tryParse(_pengeluaranHargaController.text.replaceAll('.', '')) ?? 0.0;
+    final date = _pengeluaranDate ?? DateTime.now();
+
+    final pengeluaran = Pengeluaran(
+      deskripsi: deskripsi,
+      harga: harga,
+      tanggal: date,
+      createdById: widget.currentUser.id,
+      createdByName: widget.currentUser.username,
+      isApproved: widget.currentUser.role == Role.admin,
+      approvedById: widget.currentUser.role == Role.admin ? widget.currentUser.id : null,
+      approvedByName: widget.currentUser.role == Role.admin ? widget.currentUser.username : null,
+      approvedAt: widget.currentUser.role == Role.admin ? DateTime.now().toUtc() : null,
+    );
+
+    widget.onConfirmPengeluaran(pengeluaran);
+    _pengeluaranDeskripsiController.clear();
+    _pengeluaranHargaController.clear();
+    _pengeluaranDate = null;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Pengeluaran berhasil ditambahkan."), backgroundColor: AppColors.accentGreen),
+    );
+    widget.onNavigateAfterSubmit(2);
   }
 
   Widget _buildFormSection({required String title, required Widget child}) {
@@ -306,7 +352,8 @@ class _PencatatanScreenState extends State<PencatatanScreen>
   Widget _buildSewaForm() {
     return Form(
       key: _sewaFormKey,
-      child: ListView(
+      child: RefreshWrapper(
+        child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           _buildFormSection(
@@ -338,20 +385,21 @@ class _PencatatanScreenState extends State<PencatatanScreen>
                   keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 16),
-                _buildSewaStatusDropdown(),
               ],
             ),
           ),
           const SizedBox(height: 24),
         ],
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildPesananForm() {
     return Form(
       key: _pesananFormKey,
-      child: ListView(
+      child: RefreshWrapper(
+        child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           _buildFormSection(
@@ -398,7 +446,54 @@ class _PencatatanScreenState extends State<PencatatanScreen>
           const SizedBox(height: 24),
         ],
       ),
-    );
+    ),
+  );
+  }
+
+  Widget _buildPengeluaranForm() {
+    return Form(
+      key: _pengeluaranFormKey,
+      child: RefreshWrapper(
+        child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _buildFormSection(
+            title: 'Input Pengeluaran',
+            child: Column(
+              children: [
+                buildTextField(_pengeluaranDeskripsiController, 'Deskripsi', Icons.description_outlined, maxLines: 3),
+                const SizedBox(height: 16),
+                buildTextField(_pengeluaranHargaController, 'Harga', Icons.price_check_rounded, keyboardType: TextInputType.number),
+                const SizedBox(height: 16),
+                InkWell(
+                  onTap: () async {
+                    DateTime? picked = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.now(),
+                      firstDate: DateTime(2023),
+                      lastDate: DateTime(2030),
+                    );
+                    if (picked != null) setState(() => _pengeluaranDate = picked);
+                  },
+                  child: InputDecorator(
+                    decoration: InputDecoration(
+                      labelText: 'Tanggal',
+                      prefixIcon: const Icon(Icons.calendar_today_rounded),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
+                    child: Text(_pengeluaranDate != null ? DateFormat('d MMMM yyyy').format(_pengeluaranDate!) : 'Pilih Tanggal'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    ),
+  );
   }
 
   Widget _buildCommonFields() {
@@ -491,19 +586,4 @@ class _PencatatanScreenState extends State<PencatatanScreen>
     );
   }
 
-  Widget _buildSewaStatusDropdown() {
-    return InputDecorator(
-      decoration: InputDecoration(
-        labelText: 'Status',
-        prefixIcon: const Icon(Icons.sync_rounded),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        filled: true,
-        fillColor: Colors.grey.shade100,
-      ),
-      child: const Text(
-        'Proses',
-        style: TextStyle(color: AppColors.textSecondary),
-      ),
-    );
-  }
 }

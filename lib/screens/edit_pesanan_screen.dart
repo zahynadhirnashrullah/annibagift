@@ -27,7 +27,7 @@ class _EditPesananScreenState extends State<EditPesananScreen> {
   final _keteranganController = TextEditingController();
   final _hargaController = TextEditingController();
 
-  PesananStatus? _selectedPesananStatus;
+
 
   @override
   void initState() {
@@ -37,7 +37,6 @@ class _EditPesananScreenState extends State<EditPesananScreen> {
     _noHpController.text = widget.pesanan.noHp;
     _keteranganController.text = widget.pesanan.keterangan;
     _hargaController.text = NumberFormat('#,###', 'id_ID').format(widget.pesanan.totalHarga);
-    _selectedPesananStatus = widget.pesanan.status;
   }
 
   @override
@@ -72,7 +71,6 @@ class _EditPesananScreenState extends State<EditPesananScreen> {
       totalHarga: double.tryParse(_hargaController.text.replaceAll('.', '')) ?? 0.0,
       keterangan: _keteranganController.text,
       tanggalDibuat: widget.pesanan.tanggalDibuat, // Tanggal dibuat tidak berubah
-      status: _selectedPesananStatus ?? PesananStatus.proses,
       
       // --- PERUBAHAN PENTING DI SINI ---
       // Memastikan data pemilik asli tidak berubah saat diedit
@@ -93,7 +91,8 @@ class _EditPesananScreenState extends State<EditPesananScreen> {
       ),
       body: Form(
         key: _pesananFormKey,
-        child: ListView(
+        child: RefreshWrapper(
+          child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
             buildTextField(
@@ -121,10 +120,9 @@ class _EditPesananScreenState extends State<EditPesananScreen> {
               Icons.notes_rounded,
               maxLines: 3,
             ),
-            const SizedBox(height: 16),
-            _buildPesananStatusDropdown(),
           ],
         ),
+      ),
       ),
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -138,27 +136,4 @@ class _EditPesananScreenState extends State<EditPesananScreen> {
   }
 
   // ... (Widget _buildPesananStatusDropdown tidak berubah) ...
-  Widget _buildPesananStatusDropdown() {
-    return DropdownButtonFormField<PesananStatus>(
-      initialValue: _selectedPesananStatus,
-      items: PesananStatus.values
-          .map((status) => DropdownMenuItem(
-                value: status,
-                child: Text(status == PesananStatus.proses
-                    ? 'Proses'
-                    : status == PesananStatus.selesai
-                        ? 'Selesai'
-                        : 'Dibatalkan'),
-              ))
-          .toList(),
-      onChanged: (v) => setState(() => _selectedPesananStatus = v),
-      decoration: InputDecoration(
-        labelText: 'Status',
-        prefixIcon: const Icon(Icons.sync_rounded),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        filled: true,
-        fillColor: Colors.white,
-      ),
-    );
-  }
 }

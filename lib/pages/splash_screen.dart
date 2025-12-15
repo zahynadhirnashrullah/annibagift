@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:annibagift/pages/login_screen.dart'; // Pastikan path ini benar
+import '../services/auth_service.dart';
+import '../models/models.dart';
+import 'main_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -12,9 +15,27 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    // Navigasi ke layar login setelah 3 detik
-    Future.delayed(const Duration(seconds: 3), () async {
-      // Guard against using context if the widget was disposed while waiting
+    // Check for persisted user session and navigate accordingly
+    Future.delayed(const Duration(seconds: 1), () async {
+      if (!mounted) return;
+      try {
+        final restored = await AuthService.instance.restoreUserSession();
+        if (restored != null) {
+          // If user was previously admin, attempt to sign in admin secondary app if possible
+          if (restored.role == Role.admin) {
+            // We don't store passwords for security reasons; admin secondary auth
+            // will remain signed-in if Firebase persisted it. The admin service
+            // initialization runs in main.dart, so we just navigate.
+          }
+          if (!mounted) return;
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => MainScreen(currentUser: restored)),
+          );
+          return;
+        }
+      } catch (_) {}
+
+      // No persisted session — go to Login
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const LoginScreen()),
